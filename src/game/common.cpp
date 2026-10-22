@@ -215,6 +215,58 @@ void EdgeFill::run(MegaDrive& md, int ext, bool plane_b) {
     }
 }
 
+int refresh_left_columns(MegaDrive& md, const StreamLayer& L, int cols, bool verify, int first, int dir) {
+    auto r16 = [&](uint32_t a) { return (uint32_t)md.ram16(a); };
+    auto r32 = [&](uint32_t a) { return md.ram32(a); };
+    VDP& v = md.vdp;
+    const int snap_x = (int16_t)r16(L.snap_x), snap_y = (uint16_t)r16(L.snap_y);
+    const uint32_t tiles = r32(L.tiles), limit = L.limit ? r32(L.limit) : 0;
+    const int stride = (int16_t)r16(L.stride);
+    int diffs = 0;
+    for (int k = 0; k < cols; k++) {
+        const int x = snap_x + dir * 16 * (first + k);
+        if (x < 0 || x > 0x7FF0) continue;
+        uint32_t p;
+        if (L.rowptr_is_long) p = r32(L.rowptr_tab + ((snap_y & 0xFFF0) >> L.rowptr_shift));
+        else p = 0xFF0000u | r16(L.rowptr_tab + ((snap_y & 0xFFF0) >> L.rowptr_shift));
+        p += (uint32_t)((x >> 4) * 2);
+        const uint32_t d1 = (uint32_t)(x >> 2) & 0x7E, d5 = (d1 + 2) & 0x7E;
+        uint32_t tab = L.vram_tab + (uint32_t)(((snap_y >> 3) & 0x1F) * 4);
+        for (int i = 0; i < 16; i++) {
+            uint32_t d4 = 0;
+            if (!limit || p < limit) d4 = md.read16(p) & 0xFFFF;
+            const uint32_t t = tiles + (uint32_t)(int16_t)d4;
+            const uint32_t e0 = r32(tab), e1 = r32(tab + 4);
+            const struct { uint32_t e, d, off; } cell[4] = {{e0, d1, 0}, {e0, d5, 2}, {e1, d1, 4}, {e1, d5, 6}};
+            for (const auto& c : cell) {
+                const uint32_t lo = (c.e | c.d) & 0xFFFF, hi = (c.e >> 16) & 0xFFFF;
+                const uint32_t addr = (lo & 0x3FFF) | ((hi & 3) << 14);
+                const uint16_t w = md.read16(t + c.off);
+                const uint16_t cur = (uint16_t)((v.vram[addr] << 8) | v.vram[(addr + 1) & 0xFFFF]);
+                if (verify) { if (cur != w) diffs++; }
+                else { v.vram[addr] = (uint8_t)(w >> 8); v.vram[(addr + 1) & 0xFFFF] = (uint8_t)w; }
+            }
+            tab += 8;
+            p += (uint32_t)(int32_t)stride;
+        }
+    }
+    return diffs;
+}
+
+bool refresh_left_strip(MegaDrive& md, const StreamLayer& layer, int cols) {
+    if (refresh_left_columns(md, layer, 2, true, 1, +1) != 0) return false;
+    refresh_left_columns(md, layer, cols);
+    return true;
+}
+
+bool refresh_edge_strips(MegaDrive& md, const StreamLayer& layer, int ext) {
+    if (refresh_left_columns(md, layer, 2, true, 1, +1) != 0) return false;
+    const int n = (ext + 15) / 16;
+    refresh_left_columns(md, layer, n);                       // left of the view
+    refresh_left_columns(md, layer, n + 3, false, 19, +1);    // right of the view (from the last columns inside it)
+    return true;
+}
+
 void hud_remap_line(VDP& vdp, int line, uint8_t* plane_a, uint8_t* plane_b, HudLayout& layout) {
     if (line < layout.y0 || line >= layout.y1) return;
     const int ext = vdp.ext;

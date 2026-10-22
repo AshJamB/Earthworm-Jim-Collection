@@ -13,6 +13,7 @@
 #include <memory>
 #include <vector>
 #include "../src/core/md.h"
+#include "../src/game/common.h"
 #include "../src/game/game.h"
 
 static int failures = 0;
@@ -51,6 +52,11 @@ static double busy(const Shot& s, int x0, int x1) {
     return tot ? (double)n / tot : 0;
 }
 
+// The map layer(s) each game streams, as in ewj1.cpp / ewj2.cpp: the redrawing of the strip beside the screen must give what
+// the game itself drew for the columns inside the view.
+static const StreamLayer kLayer1 = {0xFFA686, 0xFFA688, 0xFFB396, 0xFFB548, true, 2, 0xFFA66C, 0xFFA6B8, 0};
+static const StreamLayer kLayer2 = {0xFFA182, 0xFFA184, 0xFFB262, 0xFFB4E6, false, 3, 0xFFA166, 0xFFA1D0, 0xFF9416};
+
 static void test_game(const char* path, GameModule* m, bool right_moves) {
     std::ifstream f(path, std::ios::binary);
     if (!f) { printf("skip %s (ROM not found)\n", path); return; }
@@ -83,6 +89,15 @@ static void test_game(const char* path, GameModule* m, bool right_moves) {
                 // walk right (jumping now and then): the extension must stay filled
                 for (int k = 0; k < 12; k++) run_frames(md, m, cfg, info, 20, 0x08 | ((k / 2) % 2 ? 0x10 : 0));
                 Shot later = grab(md);
+                // the columns inside the view, drawn by the game itself, once the camera has stood still a moment
+                const bool one = m->id()[3] == '1';
+                const StreamLayer& layer = one ? kLayer1 : kLayer2;
+                for (int tries = 0; tries < 60; tries++) {
+                    const int sx = md.ram16(layer.snap_x), sy = md.ram16(layer.snap_y);
+                    run_frames(md, m, cfg, info, 2, 0);
+                    if (sx == md.ram16(layer.snap_x) && sy == md.ram16(layer.snap_y)) break;
+                }
+                if (one || md.ram8(0xFFFF15) == 0) { const int d = refresh_left_columns(md, layer, 3, true, 1, +1); if (d) printf("  level %d: %d cells differ (snap %d,%d)\n", i, d, md.ram16(layer.snap_x), md.ram16(layer.snap_y)); /* informational: some levels draw their map another way, the module then leaves the strip alone */ }
                 if (info.mask_right < ext) {
                     const double r = busy(later, later.w - (ext - info.mask_right), later.w);
                     if (r < 0.02) { printf("  level %d: right strip empty after walking (%.3f)\n", i, r); empty_ext++; }

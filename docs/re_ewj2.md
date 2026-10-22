@@ -56,3 +56,8 @@ $FFA182/$FFA184, map width in px $FFA16C, level number $FFA1A6). Two scrolling l
 row routines: plane A at $2530xx-$2533xx and plane B at $2534xx-$2537xx. Enemies are placed by $256510/$25651A (columns,
 x offset $1150 = $1000 + 336) and $2565B4/$2565BE (rows). `widescreen_patches()` in `ewj2.cpp` lists the twelve
 immediates changed (22 -> 24 columns, 23 -> 25 for rows, offset $1150 -> $1170).
+
+The cells left of the screen are redrawn each frame like in the first game (`refresh_left_columns`): plane A uses
+$FFA182/$FFA184, the table at $FFB262 and row offsets at $FFB4E6; plane B (only while $FFFBB2 is set) uses $FFA18E/$FFA190,
+$FFB362 and $FFB676; both use the stride at $FFA166, the metatile table pointer at $FFA1D0 and give tile 0 at or past the
+limit at $FF9416. Skipped while $FFFF15 is set.

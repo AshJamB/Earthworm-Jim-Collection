@@ -51,6 +51,31 @@ private:
     int still_ = 0, last_scroll_ = -1;
 };
 
+// The games draw their scrolling level maps into a 64-cell ring in VRAM one 16-px metatile column (or row) at a time,
+// just ahead of the camera, so the cells beside the 4:3 view go stale: after walking right and back, or moving up and
+// down, the strip left of the screen holds other parts of the map. This redraws that strip every frame, with the
+// game's own drawing rules (which RAM tables a layer uses is in the description).
+struct StreamLayer {
+    uint32_t snap_x, snap_y;     // RAM words: the camera snapped to 16 px (the position the game draws from)
+    uint32_t vram_tab;           // RAM table of VDP address commands, one long per nametable cell row
+    uint32_t rowptr_tab;         // RAM table of map row pointers (per 16-px row)
+    bool     rowptr_is_long;     // long pointer (else a word offset into work RAM)
+    int      rowptr_shift;       // map row number -> table offset: (y & 0xFFF0) >> shift
+    uint32_t stride;             // RAM word: bytes from one map row to the next
+    uint32_t tiles;              // RAM long: pointer to the metatile table (4 words each)
+    uint32_t limit;              // RAM long: map reads at or past this address give tile 0 (0 = none)
+};
+// Redraws `cols` metatile columns left of the snapped camera (pixel columns snap_x - 16 ... snap_x - 16 * cols).
+// With `verify`, writes nothing and returns how many cells differ from what is in VRAM instead (for tests).
+int refresh_left_columns(MegaDrive& md, const StreamLayer& layer, int cols, bool verify = false, int first = 1, int dir = -1);
+// refresh_left_columns, but only after checking the same drawing rules against the columns just inside the view, which
+// the game drew itself: if they differ (a map edge, a level that draws its map another way, a frame in which the game is
+// part-way through scrolling) the strip is left as it is. Returns whether it was redrawn.
+bool refresh_left_strip(MegaDrive& md, const StreamLayer& layer, int cols);
+// The same for both strips beside the screen: `ext` px left of the camera, and the columns from the right edge of the
+// 4:3 view out to `ext` px beyond it (the ring holds old map there after the camera has walked left).
+bool refresh_edge_strips(MegaDrive& md, const StreamLayer& layer, int ext);
+
 // HUD strip remapping for widescreen: the window-plane status bar is split into segments
 // that anchor to the left edge, the centre or the right edge of the widened screen; gaps are
 // filled with a repeated "filler" column span of the bar.

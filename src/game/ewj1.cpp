@@ -14,6 +14,9 @@ constexpr uint32_t HEALTH = 0xFFFBFC;    // 4 characters, "0100" at full health
 constexpr uint32_t LIVES = 0xFFA6C8;     // 1 character, '3' at the start of a game
 constexpr uint32_t CAMERA_X = 0xFFA676;     // camera position in pixels (word); the left edge of the map is at 0
 constexpr uint32_t WORLD_W = 0xFFA670;       // map width in pixels (word)
+// The level map layer as the game draws it (see StreamLayer): camera snapped to 16 px, VDP address table, map row
+// pointers (longs), row stride and metatile table. Used to keep the cells left of the screen up to date.
+const StreamLayer kMapLayer = {0xFFA686, 0xFFA688, 0xFFB396, 0xFFB548, true, 2, 0xFFA66C, 0xFFA6B8, 0};
 constexpr uint32_t LEVEL = 0xFFA692;     // level number (byte): the index into the game's own "START ON LEVEL" list
 
 struct Stage { const char* group; const char* name; };   // list position == LEVEL value (the game steps through it with +1)
@@ -153,6 +156,7 @@ public:
     // Applied before every frame. Each write is made only while the game shows that counter as digits, so the
     // title and menu screens (which reuse the memory) are left alone.
     void pre_frame(MegaDrive& md, const GameConfig& cfg) override {
+        if (cfg.ext > 0 && is_digits(md, HEALTH, 4)) refresh_edge_strips(md, kMapLayer, cfg.ext);   // widescreen: the strips beside the screen
         fill_.run(md, cfg.ext, true);   // widescreen: carry the background past its own edges
         const bool hud = is_digits(md, HEALTH, 4);
         const bool dead = hud && md.ram8(HEALTH) == '0' && md.ram8(HEALTH + 1) == '0' && md.ram8(HEALTH + 2) == '0' &&

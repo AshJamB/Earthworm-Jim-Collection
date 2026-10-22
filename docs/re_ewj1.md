@@ -68,3 +68,9 @@ The object loop at $24A766 despawns an object when it is more than 120 px left o
 a wider view does not lose them. `widescreen_patches()` in `ewj1.cpp` changes 22 -> 24 columns (map offset $2C -> $30,
 VRAM column offset $58 -> $60, map end test $16 -> $18), the enemy offset $150 -> $170 and the row widths $16 -> $18.
 The level's map size is at $FFA670 (px) and $FFA674; the level number is $FFA692.
+
+The cells left of the screen are stale after going back and forth (the 64-cell ring only holds the map just behind the
+camera) so the module redraws them each frame with the game's own rule (`refresh_left_columns`, `StreamLayer` in
+`common.h`): for the 16 map rows from $FFA688, the metatile word at the row pointer ($FFB548 table) + column x 2 selects
+four words from the table at $FFA6B8; each goes to the VRAM address the long at $FFB396 + 4 x cell row gives (OR the column
+byte offset, then the two halves swapped into a VDP command). Checked against the cells the game draws itself.
