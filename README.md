@@ -1,4 +1,8 @@
-# Earthworm Jim Collection
+<p align="center">
+  <img src="res/app_icon_preview.png" alt="Earthworm Jim Collection icon" width="160">
+</p>
+
+<h1 align="center">Earthworm Jim Collection</h1>
 
 A Windows and Android port of the Sega Mega Drive / Genesis games **Earthworm Jim** (1994) and
 **Earthworm Jim 2** (1995), with a launcher, touch controls, gamepad support, save states, rewind and fast
