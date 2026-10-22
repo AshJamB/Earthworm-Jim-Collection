@@ -74,3 +74,6 @@ The status bar sprites go through the fixed-position branch ($6(a2) bit 3) of th
 $255D4C, $255DAE and $255E16. With HUD anchoring they call a stub at $2FEE40 that moves a piece of an object near the left
 edge (x < $60) `ext` px left and one near the right edge (x >= $E0) `ext` px right, and sets bit 15 of its y (the VDP's HUD
 flag). The left-cull compare at $255E78 / $255EE0 / $255F48 / $255FB6 is widened from $60 to $30.
+The HUD text and counters (lives, health, ammo) are written into the sprite buffer at $FF964E (from $255762) before the
+objects; the join $255AF2 (`clr.b $FFFBD7`) calls a stub at $2FEE80 that moves everything in the buffer so far `ext` px left
+and flags it.

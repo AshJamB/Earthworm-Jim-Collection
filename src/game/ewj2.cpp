@@ -81,6 +81,13 @@ void hud_patches(std::vector<RomPatch>& p, const GameConfig& cfg) {
     p.push_back({0x2FEE40, std::vector<uint16_t>(stub.size(), 0xFFFF), stub});
     for (uint32_t site : {0x255CEAu, 0x255D4Cu, 0x255DAEu, 0x255E16u})
         p.push_back({site, {0x9679, 0x00FF, 0xA1E0, 0x0C43, 0x01BF}, {0x4EB9, 0x002F, 0xEE40, 0x4E71, 0x4E71}});
+    // The lives / health / ammo text and counters are written into the sprite table buffer ($FF964E up to A1) before
+    // the objects. The join after them ($255AF2, `clr.b $FFFBD7`) calls a stub that moves each of them `ext` px left
+    // and flags it, then does the clr.
+    const std::vector<uint16_t> run = {0x45F9, 0x00FF, 0x964E, 0xB5C9, 0x640E, 0x046A, e, 0x0006,
+                                       0x0052, 0x8000, 0x508A, 0x60EE, 0x4239, 0x00FF, 0xFBD7, 0x4E75};
+    p.push_back({0x2FEE80, std::vector<uint16_t>(run.size(), 0xFFFF), run});
+    p.push_back({0x255AF2, {0x4239, 0x00FF, 0xFBD7}, {0x4EB9, 0x002F, 0xEE80}});
 }
 
 std::vector<RomPatch> widescreen_patches(const GameConfig& cfg) {
