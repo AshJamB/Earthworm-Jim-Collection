@@ -1,4 +1,4 @@
-package com.darhkfox.mickeydonald;
+package com.ashjam.earthwormjim;
 
 import android.content.ClipData;
 import android.content.Intent;

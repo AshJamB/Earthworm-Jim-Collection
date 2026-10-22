@@ -106,8 +106,11 @@ bool launch_swap_script(const std::wstring& exe, const std::wstring& staged) {
     buf.push_back(0);
     STARTUPINFOW si = {};
     si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
     PROCESS_INFORMATION pi = {};
-    if (!CreateProcessW(nullptr, buf.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW | DETACHED_PROCESS, nullptr, nullptr, &si, &pi))
+    // (CREATE_NO_WINDOW is ignored when combined with DETACHED_PROCESS, which is what showed the console window)
+    if (!CreateProcessW(nullptr, buf.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi))
         return false;
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);

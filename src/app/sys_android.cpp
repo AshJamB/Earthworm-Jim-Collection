@@ -112,7 +112,7 @@ std::wstring data_dir() {
 }
 
 // files/roms (where the ROM picker copies to) and, for adb or a file manager, the app's external files folder
-// (Android/data/com.darhkfox.mickeydonald/files) and its "roms" subfolder.
+// (Android/data/com.ashjam.earthwormjim/files) and its "roms" subfolder.
 std::vector<std::wstring> rom_dirs() {
     std::vector<std::wstring> dirs = {path_join(data_dir(), L"roms")};
     if (const char* ext = SDL_AndroidGetExternalStoragePath()) {

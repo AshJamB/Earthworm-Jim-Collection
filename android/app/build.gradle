@@ -8,12 +8,12 @@ def keystoreFile = rootProject.file('keystore.properties')
 if (keystoreFile.exists()) keystoreFile.withInputStream { keystoreProps.load(it) }
 
 android {
-    namespace 'com.darhkfox.mickeydonald'
+    namespace 'com.ashjam.earthwormjim'
     compileSdk 34
     ndkVersion '28.2.13676358'
 
     defaultConfig {
-        applicationId 'com.darhkfox.mickeydonald'
+        applicationId 'com.ashjam.earthwormjim'
         minSdk 23
         targetSdk 34
         versionCode 2

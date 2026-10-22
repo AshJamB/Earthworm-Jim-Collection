@@ -18,7 +18,7 @@ for %%f in (*.bin *.md *.gen *.smd) do (
 )
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$s = New-Object -ComObject WScript.Shell; $d = (Resolve-Path '%OUT%').Path;" ^
-  "foreach ($g in @(@('Castle of Illusion','coi'), @('QuackShot','qs'), @('World of Illusion','woi'))) {" ^
+  "foreach ($g in @(@('Earthworm Jim','ewj1'), @('Earthworm Jim 2','ewj2'))) {" ^
   "  $l = $s.CreateShortcut((Join-Path $d ($g[0] + '.lnk'))); $l.TargetPath = (Join-Path $d 'EarthwormJimCollection.exe');" ^
   "  $l.Arguments = '--game ' + $g[1]; $l.WorkingDirectory = $d; $l.IconLocation = (Join-Path $d 'EarthwormJimCollection.exe') + ',0'; $l.Save() }"
 echo Packaged to "%OUT%"

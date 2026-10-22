@@ -171,7 +171,7 @@ static void render(int filter, bool overlay, double fps, bool vsync) {
     v.outline_round_rect(pn, 18 * u, 1.5f * u, 0x60FFFFFF);
     Rect hdr = { pn.x + 14 * u, pn.y + 14 * u, pn.w - 28 * u, v.line_height(FontId::Title) + 8 * u };
     v.fill_rect_gradient(hdr, 0xFF4A7FE8, 0xFF182E66);
-    v.draw_text(FontId::Title, hdr.x + hdr.w * 0.5f, hdr.y + 4 * u, "Castle of Illusion", white, Align::Center);
+    v.draw_text(FontId::Title, hdr.x + hdr.w * 0.5f, hdr.y + 4 * u, "Earthworm Jim", white, Align::Center);
     float cx = pn.x + pn.w * 0.5f, x0 = pn.x + 24 * u, x1 = pn.x + pn.w - 24 * u;
     float y = hdr.y + hdr.h + 6 * u;
     v.draw_text(FontId::Huge, cx, y, "HUGE 1990", 0xFFFFD34D, Align::Center);
