@@ -184,7 +184,13 @@ void EdgeFill::run(MegaDrive& md, int ext, bool plane_b) {
         }
         saved_.clear();
     };
-    if (ext <= 0 || (v.reg[11] & 3) != 0 || (v.reg[16] & 3) != 1) { restore(); still_ = 0; last_scroll_ = -1; return; }
+    if (ext <= 0 || (v.reg[16] & 3) != 1) { restore(); still_ = 0; last_scroll_ = -1; return; }
+    if ((v.reg[11] & 3) != 0) {   // scrolled per 8 lines or per line: the cells beside the picture are worked out row by row
+        restore();
+        still_ = 0; last_scroll_ = -1;
+        if ((v.reg[11] & 4) == 0) run_rows(md, ext, plane_b);
+        return;
+    }
     const uint32_t base = plane_b ? (uint32_t)(v.reg[4] & 7) << 13 : (uint32_t)(v.reg[2] & 0x38) << 10;
     const uint32_t hs = ((uint32_t)(v.reg[13] & 0x3F) << 10) + (plane_b ? 2 : 0);
     const int scroll = ((v.vram[hs] << 8) | v.vram[hs + 1]) & 0x3FF;
@@ -230,6 +236,41 @@ void EdgeFill::run(MegaDrive& md, int ext, bool plane_b) {
         } else {
             if (empty(dl) && full(sl)) mirror(dl, sl, false);
             if (empty(dr) && full(sr)) mirror(dr, sr, false);
+        }
+    }
+}
+
+// EdgeFill for a plane that scrolls per 8 lines or per line (parallax bands, a wavy backdrop): each row of the 64-cell ring
+// has its own scroll, so the empty cells beside the picture are found and mirrored row by row.
+void EdgeFill::run_rows(MegaDrive& md, int ext, bool plane_b) {
+    VDP& v = md.vdp;
+    if ((v.reg[11] & 3) < 2 || (v.reg[16] & 3) != 1) return;   // per-8-line / per-line scroll, 64-cell rows only
+    const uint32_t base = plane_b ? (uint32_t)(v.reg[4] & 7) << 13 : (uint32_t)(v.reg[2] & 0x38) << 10;
+    const uint32_t hs = ((uint32_t)(v.reg[13] & 0x3F) << 10) + (plane_b ? 2 : 0);
+    const bool per_line = (v.reg[11] & 3) == 3;
+    const bool col_vs = (v.reg[11] & 4) != 0;   // vertical scroll per 2 cells: the extension takes the nearest column's value
+    const int n = (ext + 7) / 8 + 1;
+    auto addr = [&](int col, int row) { return (base + (uint32_t)((row * 64 + (col & 63)) << 1)) & 0xFFFF; };
+    auto cell = [&](int col, int row) -> uint16_t {
+        const uint32_t a = addr(col, row);
+        return (uint16_t)((v.vram[a] << 8) | v.vram[(a + 1) & 0xFFFF]);
+    };
+    auto put = [&](int col, int row, uint16_t w) {
+        const uint32_t a = addr(col, row);
+        v.vram[a] = (uint8_t)(w >> 8); v.vram[(a + 1) & 0xFFFF] = (uint8_t)w;
+    };
+    for (int side = 0; side < 2; side++) {   // 0: left of the picture, 1: right of it
+        const int vs = v.vsram[(col_vs ? (side ? 38 : 0) : 0) + (plane_b ? 1 : 0)] & 0x3FF;
+        for (int r = 0; r < 32; r++) {
+            const int y = (r * 8 - vs) & 0xFF;          // a screen line this ring row is drawn on
+            if (y >= v.fb_lines) continue;               // (off the bottom: not visible now)
+            const uint32_t e = hs + (uint32_t)(per_line ? y * 4 : (y & ~7) * 4);
+            const int scroll = ((v.vram[e & 0xFFFF] << 8) | v.vram[(e + 1) & 0xFFFF]) & 0x3FF;
+            const int c0 = (((-scroll) & 0x3FF) >> 3) & 63;
+            for (int j = 0; j < n; j++) {
+                const int dst = side ? c0 + 40 + j : c0 - 1 - j, src = side ? c0 + 39 - j : c0 + j;
+                if (!(cell(dst, r) & 0x7FF) && (cell(src, r) & 0x7FF)) put(dst, r, (uint16_t)(cell(src, r) ^ 0x0800));
+            }
         }
     }
 }

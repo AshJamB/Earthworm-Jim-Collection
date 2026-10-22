@@ -86,8 +86,11 @@ void hud_patches(std::vector<RomPatch>& p, const GameConfig& cfg) {
     if (!cfg.hud_anchor) return;
     // (8 px short of the full width: the lives worm's tail swings out past the sprite's own position)
     const uint16_t shift = (uint16_t)(cfg.ext > 8 ? cfg.ext - 8 : cfg.ext);
-    const std::vector<uint16_t> stub = {0x45F9, 0x00FF, 0x9B52, 0xB5C9, 0x640E, 0x046A, shift, 0x0006,
-                                        0x0052, 0x8000, 0x508A, 0x60EE, 0x45F9, 0x00FF, 0xA6D2, 0x4E75};
+    // (a black bar of 32x32 sprites ($E6BC tiles) at the screen's left edge, which Peter Puppy and a few other levels
+    // use to cover the left edge of the picture, would show up in the middle of the widened view: it is moved off screen)
+    const std::vector<uint16_t> stub = {0x45F9, 0x00FF, 0x9B52, 0xB5C9, 0x641C, 0x046A, shift, 0x0006,
+                                        0x0C6A, 0xE6BC, 0x0004, 0x6606, 0x046A, 0x0040, 0x0006,
+                                        0x0052, 0x8000, 0x508A, 0x60E0, 0x45F9, 0x00FF, 0xA6D2, 0x4E75};
     p.push_back({0x2FFC40, std::vector<uint16_t>(stub.size(), 0xFFFF), stub});
     p.push_back({0x2488E2, {0x45F9, 0x00FF, 0xA6D2}, {0x4EB9, 0x002F, 0xFC40}});
 }
@@ -101,7 +104,13 @@ std::vector<RomPatch> widescreen_patches(const GameConfig& cfg) {
         {0x24AF10, {0x0150}, {0x0170}},   // enemies placed with the right column: x offset 336 -> 368
         {0x2482CA, {0x0016}, {0x0018}},   // row drawn below: 23 -> 25 columns
         {0x2483CA, {0x0016}, {0x0018}},   // row drawn above: 23 -> 25 columns
-        {0x24AFCC, {0x0016}, {0x0018}},   // enemies placed with a new row: 23 -> 25 columns
+        // Enemies and items placed with a new row (the camera moving up or down): the scan starts at the snapped camera
+        // column and covers 23 columns. It now starts up to 3 columns further left (not before the map's first column;
+        // a stub in free ROM replaces the load of the start column at $24AFBA and backs the map pointer up with it) and
+        // covers 27 columns, so what lies beside the screen on both sides is in place.
+        {0x24AFCC, {0x0016}, {0x001A}},
+        {0x24AFBA, {0x3C39, 0x00FF, 0xA686, 0x0206, 0x00F0}, {0x4EB9, 0x002F, 0xFC80, 0x4E71, 0x4E71}},
+        {0x2FFC80, {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF}, {0x3C39, 0x00FF, 0xA686, 0x0246, 0xFFF0, 0x3206, 0xE841, 0x0C41, 0x0003, 0x6502, 0x7203, 0x3401, 0xE94A, 0x9C42, 0xD241, 0x90C1, 0x4E75}},
         // Enemies and items of the column that scrolls in on the left are placed 3 columns further out, where the 16 px
         // margin of the original is now inside the view (an item popped into view at the edge): the map pointer of
         // that scan (the store at $2480B4) goes through a stub in free ROM that backs it up 3 columns (not near the
@@ -223,7 +232,7 @@ public:
     void pre_frame(MegaDrive& md, const GameConfig& cfg) override {
         if (cfg.ext > 0 && is_digits(md, HEALTH, 4)) refresh_edge_strips(md, kMapLayer, cfg.ext);   // widescreen: the strips beside the screen
         // widescreen: carry the background past its own edges (start afresh in each level and outside levels)
-        if (is_digits(md, HEALTH, 4) && md.ram8(LEVEL) == fill_level_) fill_.run(md, cfg.ext, true);
+        if (is_digits(md, HEALTH, 4) && md.ram8(LEVEL) == fill_level_) { fill_.run(md, cfg.ext, true); if ((md.vdp.reg[11] & 3) != 0) fill_.run_rows(md, cfg.ext, false); }   // (plane A too where it scrolls per band)
         else { fill_.reset(); fill_level_ = md.ram8(LEVEL); }
         const bool hud = is_digits(md, HEALTH, 4);
         const bool dead = hud && md.ram8(HEALTH) == '0' && md.ram8(HEALTH + 1) == '0' && md.ram8(HEALTH + 2) == '0' &&

@@ -98,3 +98,13 @@ command $0B). The 68000 appends commands to a 64-byte ring at Z80 $1B40 with its
 command, argument (routine `$2CBC82` in EWJ1, `$2D8280` in EWJ2 appends one byte). `$16` stops all sound, `$10 id` starts a
 tune or effect. The port parks the 68000 after the driver is up and writes the ring itself. Ids 0-127 were each played for up to 10 s:
 looping ids are the level tunes, a few run 4-9 s (jingles), the rest are effects.
+
+## Widescreen: vertical spawn scan, line-scroll backdrops, left bar
+
+- The scan that places enemies and items when the camera moves up or down ($24AF98, 23 columns from the snapped camera
+  column) now starts up to 3 columns further left (stub at $2FFC80 replaces the load of the start column at $24AFBA and
+  backs the map pointer in A0 up with it, not before the map's first column) and covers 27 columns.
+- Peter Puppy and some other levels put a 32 px black bar of sprites (tile $E6BC at x $80, written at $2488CC) at the
+  screen's left edge; the HUD stub moves it off screen when widescreen is on.
+- Backdrops that scroll per 8 lines / per line leave empty cells beside the picture; EdgeFill::run_rows mirrors them row by row
+  (plane A and B), using each row's own scroll.

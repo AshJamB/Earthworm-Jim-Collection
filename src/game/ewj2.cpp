@@ -99,7 +99,10 @@ std::vector<RomPatch> widescreen_patches(const GameConfig& cfg) {
         {0x25651C, {0x1150}, {0x1170}},   //   enemies placed with the column: x offset 336 -> 368
         {0x25320C, {0x0016}, {0x0018}},   // plane A row drawn below: 23 -> 25 columns
         {0x25332C, {0x0016}, {0x0018}},   // plane A row drawn above: 23 -> 25 columns
-        {0x2565FC, {0x0016}, {0x0018}},   //   enemies placed with a new row: 23 -> 25 columns
+        // Enemies and items placed with a new row: starts up to 3 columns further left (see ewj1.cpp) and covers 27 columns.
+        {0x2565FC, {0x0016}, {0x001A}},
+        {0x2565EA, {0x3C39, 0x00FF, 0xA182, 0x0206, 0x00F0}, {0x4EB9, 0x002F, 0xEEC0, 0x4E71, 0x4E71}},
+        {0x2FEEC0, {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF}, {0x3C39, 0x00FF, 0xA182, 0x0246, 0xFFF0, 0x3206, 0xE841, 0x0C41, 0x0003, 0x6502, 0x7203, 0x3401, 0xE94A, 0x9C42, 0xD241, 0x90C1, 0x4E75}},
         {0x253516, {0x0058}, {0x0060}},   // plane B right column: VRAM column offset 44 -> 48 cells
         {0x253542, {0x002C}, {0x0030}},   //   map offset 22 -> 24 columns
         {0x253554, {0x0016}, {0x0018}},   //   stop 22 -> 24 columns before the map end
@@ -235,7 +238,7 @@ public:
             if (md.ram8(0xFFFBB2)) refresh_edge_strips(md, kMapLayerB, cfg.ext);
         }
         // widescreen: carry the background past its own edges (start afresh in each level and outside levels)
-        if (is_digits(md, HEALTH, 4) && md.ram8(LEVEL) == fill_level_) fill_.run(md, cfg.ext, true);
+        if (is_digits(md, HEALTH, 4) && md.ram8(LEVEL) == fill_level_) { fill_.run(md, cfg.ext, true); if ((md.vdp.reg[11] & 3) != 0) fill_.run_rows(md, cfg.ext, false); }   // (plane A too where it scrolls per band)
         else { fill_.reset(); fill_level_ = md.ram8(LEVEL); }
         const bool hud = is_digits(md, HEALTH, 4);
         const bool dead = hud && md.ram8(HEALTH) == '0' && md.ram8(HEALTH + 1) == '0' && md.ram8(HEALTH + 2) == '0' &&

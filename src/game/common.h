@@ -51,6 +51,7 @@ class EdgeFill {
 public:
     void run(MegaDrive& md, int ext, bool plane_b);
     void reset() { saved_.clear(); still_ = 0; last_scroll_ = -1; moved_ = false; }
+    void run_rows(MegaDrive& md, int ext, bool plane_b);
 private:
     struct Saved { uint32_t addr; uint16_t orig, put; };
     std::vector<Saved> saved_;

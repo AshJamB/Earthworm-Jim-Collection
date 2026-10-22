@@ -85,3 +85,8 @@ command $0B). The 68000 appends commands to a 64-byte ring at Z80 $1B40 with its
 command, argument (routine `$2CBC82` in EWJ1, `$2D8280` in EWJ2 appends one byte). `$16` stops all sound, `$10 id` starts a
 tune or effect. The port parks the 68000 after the driver is up and writes the ring itself. Ids 0-127 were each played for up to 10 s:
 looping ids are the level tunes, a few run 4-9 s (jingles), the rest are effects.
+
+## Widescreen: vertical spawn scan
+
+The row spawn scan ($2565B4/$2565BE, body $2565C6) now starts up to 3 columns further left (stub at $2FEEC0 replaces the load of
+the start column at $2565EA) and covers 27 columns, like EWJ1's.
