@@ -284,6 +284,7 @@ private:
     void check_for_updates(bool manual);   // Windows: in-app updater; elsewhere opens the Releases page
     void update_poll();                    // called every frame: reacts to the updater's results
     MenuPage video_page();
+    MenuPage video_advanced_page();
     MenuPage color_page();
     MenuPage audio_page();
     MenuPage controls_page(int player);

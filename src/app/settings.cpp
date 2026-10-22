@@ -124,6 +124,7 @@ bool Settings::load(const std::wstring& path) {
             else if (k == "widescreen") widescreen = (WideMode)clampi(iv, 0, (int)WideMode::Count - 1);
             else if (k == "aspect") aspect = (AspectMode)clampi(iv, 0, (int)AspectMode::Count - 1);
             else if (k == "integer_scale") integer_scale = iv != 0;
+            else if (k == "smooth_dither") smooth_dither = iv != 0;
             else if (k == "color") color = (ColorMode)clampi(iv, 0, (int)ColorMode::Count - 1);
             else if (k == "brightness") brightness = clampi(iv, -50, 50);
             else if (k == "saturation") saturation = clampi(iv, -100, 100);
@@ -172,7 +173,7 @@ bool Settings::save(const std::wstring& path) const {
     o << "; Earthworm Jim Collection - settings\n\n[video]\n"
       << "fullscreen=" << fullscreen << "\nmonitor=" << monitor << "\nwindow_scale=" << window_scale << "\nvsync=" << vsync
       << "\nfilter=" << filter << "\nwidescreen=" << (int)widescreen << "\naspect=" << (int)aspect
-      << "\ninteger_scale=" << integer_scale << "\ncolor=" << (int)color << "\nbrightness=" << brightness
+      << "\ninteger_scale=" << integer_scale << "\nsmooth_dither=" << smooth_dither << "\ncolor=" << (int)color << "\nbrightness=" << brightness
       << "\nsaturation=" << saturation << "\ngamma=" << gamma << "\nno_sprite_limit=" << no_sprite_limit
       << "\nhud_anchor=" << hud_anchor << "\nshow_fps=" << show_fps << "\nblack_frames=" << black_frames << "\n\n[audio]\n"
       << "volume=" << volume << "\nmusic_volume=" << music_volume << "\nfilter=" << (int)audio_filter

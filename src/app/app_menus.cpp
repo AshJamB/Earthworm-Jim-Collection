@@ -72,7 +72,7 @@ void App::open_pause_menu() {
 void App::open_options_menu(bool from_launcher) {
     MenuPage p;
     p.title = "Options";
-    p.items.push_back(MenuItem::action("Video", [this]() { menu_.push(video_page()); }, "Display mode, widescreen, scaling and filters."));
+    p.items.push_back(MenuItem::action("Video", [this]() { menu_.push(video_page()); }, "Display mode, widescreen and picture style."));
     p.items.push_back(MenuItem::action("Colour", [this]() { menu_.push(color_page()); }, "Colour profiles and picture adjustments."));
     p.items.push_back(MenuItem::action("Audio", [this]() { menu_.push(audio_page()); }, "Volume and sound-chip options."));
     // Player 2 only matters for games with simultaneous 2-player support (none yet): offered from the launcher and inside such games.
@@ -109,12 +109,6 @@ void App::open_options_menu(bool from_launcher) {
                                        [this](int v) { settings_.touch_opacity = v; }, [](int v) { return std::to_string(v) + "%"; }));
 #endif
 #ifdef _WIN32   // (keyboard hotkeys: a phone rarely has a keyboard)
-    p.items.push_back(MenuItem::header("Hotkeys (changed under Controls)"));
-    p.items.push_back(MenuItem::info("Menu", [this]() { return hotkey_text(HK_MENU); }));
-    p.items.push_back(MenuItem::info("Quick save", [this]() { return hotkey_text(HK_SAVE_STATE); }));
-    p.items.push_back(MenuItem::info("Quick load", [this]() { return hotkey_text(HK_LOAD_STATE); }));
-    p.items.push_back(MenuItem::info("Screenshot", [this]() { return hotkey_text(HK_SCREENSHOT); }));
-    p.items.push_back(MenuItem::info("Fullscreen", []() { return std::string("F11 / Alt+Enter"); }));
     p.items.push_back(MenuItem::header("Updates"));
     p.items.push_back(MenuItem::toggle("Check for Updates at Start", [this]() { return settings_.check_updates; },
                                        [this](bool v) { settings_.check_updates = v; },
@@ -192,6 +186,7 @@ void App::update_poll() {
 #endif
 }
 
+// Video: the few things most people want; everything else is under Advanced.
 MenuPage App::video_page() {
     MenuPage p;
     p.title = "Video";
@@ -199,17 +194,6 @@ MenuPage App::video_page() {
 #ifdef _WIN32
     p.items.push_back(MenuItem::choice("Display Mode", {"Windowed", "Fullscreen"}, [this]() { return settings_.fullscreen ? 1 : 0; },
                                        [this, changed](int v) { settings_.fullscreen = v == 1; changed(); }));
-    {
-        std::vector<std::string> labels;
-        for (const MonitorInfo& m : enum_monitors()) labels.push_back(m.label);
-        p.items.push_back(MenuItem::choice("Monitor", labels, [this]() {
-            std::vector<MonitorInfo> l = enum_monitors();
-            HMONITOR cur = MonitorFromWindow(hwnd_, MONITOR_DEFAULTTONEAREST);
-            for (int i = 0; i < (int)l.size(); i++) if (l[i].handle == cur) return i;
-            return 0;
-        }, [this](int v) { move_to_monitor(v); save_settings(); },
-        "Which display the game uses. You can also drag the window to another screen."));
-    }
     MenuItem ws = MenuItem::slider("Window Size", 1, 6, 1, [this]() { return settings_.window_scale; },
                                    [this](int v) { settings_.window_scale = v; resize_window_to_scale(); },
                                    [](int v) { return std::to_string(v) + "x"; }, "Size of the window in windowed mode.");
@@ -226,9 +210,37 @@ MenuPage App::video_page() {
         for (int i = 0; i <= top; i++) labels.push_back(wide_mode_name((WideMode)i));
         p.items.push_back(MenuItem::choice("Widescreen", labels, [this, top]() { return std::min((int)settings_.widescreen, top); },
                                            [this, changed](int v) { settings_.widescreen = (WideMode)v; changed(); resize_window_to_scale(); },
-                                           session_ ? "Shows more of each level. Menus stay 4:3."
-                                                    : "Shows more of each level. Menus stay 4:3. Not available in the Earthworm Jim games yet."));
+                                           "Shows more of each level. Menus stay 4:3."));
     }
+    p.items.push_back(MenuItem::choice("Picture Style", {"Pixel perfect", "Sharp", "Smooth", "Scanlines", "CRT"},
+                                       [this]() { return settings_.filter; }, [this](int v) { settings_.filter = v; },
+                                       "How the picture is scaled up. Sharp is a good all-round choice; CRT mimics an old television."));
+    p.items.push_back(MenuItem::toggle("Smooth Dithering", [this]() { return settings_.smooth_dither; },
+                                       [this, changed](bool v) { settings_.smooth_dither = v; changed(); },
+                                       "The games shade with checkerboard patterns. This blends them into smooth colour, like on a TV of the day."));
+    p.items.push_back(MenuItem::action("Advanced", [this]() { menu_.push(video_advanced_page()); },
+                                       "Monitor, pixel shape, scaling, VSync and more."));
+    p.on_back = [this]() { save_settings(); };
+    return p;
+}
+
+MenuPage App::video_advanced_page() {
+    MenuPage p;
+    p.title = "Advanced Video";
+    auto changed = [this]() { apply_settings(); };
+#ifdef _WIN32
+    {
+        std::vector<std::string> labels;
+        for (const MonitorInfo& m : enum_monitors()) labels.push_back(m.label);
+        p.items.push_back(MenuItem::choice("Monitor", labels, [this]() {
+            std::vector<MonitorInfo> l = enum_monitors();
+            HMONITOR cur = MonitorFromWindow(hwnd_, MONITOR_DEFAULTTONEAREST);
+            for (int i = 0; i < (int)l.size(); i++) if (l[i].handle == cur) return i;
+            return 0;
+        }, [this](int v) { move_to_monitor(v); save_settings(); },
+        "Which display the game uses. You can also drag the window to another screen."));
+    }
+#endif
     MenuItem hud = MenuItem::toggle("Re-anchor HUD", [this]() { return settings_.hud_anchor; },
                                     [this, changed](bool v) { settings_.hud_anchor = v; changed(); },
                                     "In widescreen, moves the status bar items out to the screen edges.");
@@ -238,8 +250,6 @@ MenuPage App::video_page() {
                                        [this]() { return (int)settings_.aspect; }, [this](int v) { settings_.aspect = (AspectMode)v; }));
     p.items.push_back(MenuItem::toggle("Integer Scaling", [this]() { return settings_.integer_scale; },
                                        [this](bool v) { settings_.integer_scale = v; }, "Scale only by whole numbers for perfectly even pixels."));
-    p.items.push_back(MenuItem::choice("Filter", {"Nearest (sharp)", "Sharp bilinear", "Bilinear (smooth)", "Scanlines", "CRT"},
-                                       [this]() { return settings_.filter; }, [this](int v) { settings_.filter = v; }));
 #ifdef _WIN32
     p.items.push_back(MenuItem::toggle("VSync", [this]() { return settings_.vsync; }, [this, changed](bool v) { settings_.vsync = v; changed(); }));
 #endif

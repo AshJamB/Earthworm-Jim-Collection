@@ -33,6 +33,7 @@ void Session::apply_settings(const Settings& s) {
     c.ext = wide_ext(s.widescreen);
     if (module_ && c.ext > module_->max_ext()) c.ext = module_->max_ext();   // e.g. World of Illusion tops out at 2:1
     c.hud_anchor = s.hud_anchor;
+    smooth_dither_ = s.smooth_dither;
     if (module_ && !s.achievements) {   // achievements on: no cheats
         auto g = s.cheats.find(module_->id());
         if (g != s.cheats.end()) c.cheats = g->second;
@@ -131,6 +132,19 @@ const uint32_t* Session::frame(int& w, int& h) {
         const uint16_t* src = v.fb[y];
         uint32_t* dst = &pixels_[(size_t)y * w];
         for (int x = 0; x < w; x++) dst[x] = lut_[src[x] & 0x7FF];
+        if (smooth_dither_) {
+            // The games shade with checkerboard dithering (A B A B across a line): where a pixel differs from two equal
+            // neighbours it is blended halfway to them, which turns the pattern into the smooth colour it stands for.
+            // Sprite pixels (and so text and the status bar) are left alone.
+            dith_.assign(dst, dst + w);
+            for (int x = 1; x + 1 < w; x++) {
+                const uint32_t l = dith_[x - 1], c = dith_[x], r = dith_[x + 1];
+                if (l != r || l == c) continue;
+                if ((src[x - 1] | src[x] | src[x + 1]) & VDP::kSpritePixel) continue;
+                dst[x] = 0xFF000000u | ((((l >> 16 & 0xFF) + (c >> 16 & 0xFF)) >> 1) << 16) |
+                         ((((l >> 8 & 0xFF) + (c >> 8 & 0xFF)) >> 1) << 8) | (((l & 0xFF) + (c & 0xFF)) >> 1);
+            }
+        }
         if ((dim_l_ || dim_r_) && (mask_lines_ == 0 || y < mask_lines_)) {
             // the scenery only: sprites there (a boss's gloves, its shots) stay as they are
             for (int x = 0; x < dim_l_ && x < w; x++) if (!(src[x] & VDP::kSpritePixel)) dst[x] = dim(dst[x]);

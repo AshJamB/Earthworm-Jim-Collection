@@ -58,6 +58,7 @@ private:
     FrameInfo info_;
     uint32_t lut_[2048];
     std::vector<uint32_t> pixels_;
+    std::vector<uint32_t> dith_;           // (scratch row for smooth dithering)
     AudioMixer mixer_;
     std::unique_ptr<MdPlus> mdplus_;
     float soundtrack_gain_ = 0.7f;
@@ -66,6 +67,7 @@ private:
     int    mask_lines_ = 0;
     int    dim_l_ = 0, dim_r_ = 0;           // dimmed scenery strips (FrameInfo::dim_left / dim_right)
     bool   pillar_below_ = false;
+    bool   smooth_dither_ = false;      // Settings::smooth_dither
     bool   configured_ = false;
     Settings last_;
 };

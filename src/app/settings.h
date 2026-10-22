@@ -43,6 +43,7 @@ struct Settings {
     bool        hud_anchor = true;          // re-anchor HUD to the screen edges in widescreen
     bool        show_fps = false;
     bool        black_frames = false;       // black frame insertion (120 / 180 / 240 Hz displays)
+    bool        smooth_dither = false;      // blends the games' checkerboard dithering into smooth shading
 
     // Audio
     int         volume = 80;                // 0..100
