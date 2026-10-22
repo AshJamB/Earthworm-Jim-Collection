@@ -146,7 +146,7 @@ public:
     // ewj_jukebox_boot): $16 stops everything, $10 + id starts a tune or effect. Which ids are tunes was found by playing
     // every id (0-127) on a parked 68000 and seeing how long it sounds: those that loop are the level tunes, a few run for
     // 4-9 seconds (jingles), everything else is a sound effect. Names: the soundtrack CD's titles (Tommy Tallarico's Earthworm Jim 1 / 2 albums) where the tune could be matched to the level
-    // it plays in, otherwise the level; the tunes that could not be identified are "Unnamed" and only in the Sound Test (after the named ones). Order: as met in the game.
+    // it plays in, otherwise the level; the tunes that could not be identified are "Unnamed" (after the named ones). Order: as met in the game.
     std::vector<SoundEntry> sounds() const override {
         static const struct { int id; const char* name; int seconds; bool music; } kTunes[] = {
             {6, "Title Screen (Doobeedowapbop)", 0, true},
@@ -161,14 +161,14 @@ public:
             {1, "See Jim Run, Run Jim Run (Door Chase)", 0, true},
             {17, "Forked", 0, true},
             {8, "Continue to Rock", 0, true},
-            {5, "Unnamed Tune 5", 0, false},
-            {11, "Unnamed Tune 11", 0, false},
-            {12, "Unnamed Tune 12", 0, false},
-            {14, "Unnamed Tune 14", 0, false},
-            {15, "Unnamed Tune 15", 0, false},
-            {91, "Unnamed Jingle 91", 9, false},
-            {104, "Unnamed Jingle 104", 5, false},
-            {16, "Unnamed Jingle 16", 50, false},
+            {5, "Unnamed Tune 5", 0, true},
+            {11, "Unnamed Tune 11", 0, true},
+            {12, "Unnamed Tune 12", 0, true},
+            {14, "Unnamed Tune 14", 0, true},
+            {15, "Unnamed Tune 15", 0, true},
+            {91, "Unnamed Jingle 91", 9, true},
+            {104, "Unnamed Jingle 104", 5, true},
+            {16, "Unnamed Jingle 16", 50, true},
         };
         static const int kSilent[] = {18, 25, 58, 60, 64, 74, 75, 78, 86, 105, 126, 127};   // ids that make no sound
         std::vector<SoundEntry> v;
