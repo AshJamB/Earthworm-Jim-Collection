@@ -78,3 +78,7 @@ byte offset, then the two halves swapped into a VDP command). Checked against th
 Sprite pieces are only sent to the VDP when their x (screen x + 128) is below $1BF: `cmpi.w #$1BF,d3` at $248A04, $248A4E,
 $248B64 and $248BB0 (immediates patched to $1EF so objects show in the right strip). The camera is up to 15 px either side
 of the snapped position ($FFA686), which the strip redrawing allows for.
+
+Left-column spawn: the scan at $24AF04 places the objects of the column drawn by the left routine ($248024) at x offset -16 from
+the snapped camera. `widescreen_patches()` backs its map pointer up 3 columns through a stub at $2FFC00 (free ROM; skipped
+when the snapped camera is under 48 px) and uses offset -64, so items and enemies enter from the left edge of the wider view.

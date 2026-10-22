@@ -64,3 +64,6 @@ limit at $FF9416. Skipped while $FFFF15 is set.
 
 The same sprite cull (`cmpi.w #$1BF,d3`) is at $255CF0, $255D52, $255DB4, $255E1C, $255E7C, $255EE4, $255F4C and $255FBA (immediates
 patched to $1EF). The camera is up to 18 px either side of the snapped position ($FFA182).
+
+Left-column spawn: as in the first game: the pointer store at $252FB6 goes through a stub at $2FEE00, offset $0FF0 at $256512
+becomes $0FC0. Neither is done for the rows drawn when the camera moves up or down.

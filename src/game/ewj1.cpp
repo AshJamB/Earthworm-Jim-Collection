@@ -84,6 +84,13 @@ std::vector<RomPatch> widescreen_patches(const GameConfig& cfg) {
         {0x2482CA, {0x0016}, {0x0018}},   // row drawn below: 23 -> 25 columns
         {0x2483CA, {0x0016}, {0x0018}},   // row drawn above: 23 -> 25 columns
         {0x24AFCC, {0x0016}, {0x0018}},   // enemies placed with a new row: 23 -> 25 columns
+        // Enemies and items of the column that scrolls in on the left are placed 3 columns further out, where the 16 px
+        // margin of the original is now inside the view (an item popped into view at the edge): the map pointer of
+        // that scan (the store at $2480B4) goes through a stub in free ROM that backs it up 3 columns (not near the
+        // left end of the map), and the x offset $FFF0 (-16) becomes -64.
+        {0x2480B4, {0x23C8, 0x00FF, 0xA694}, {0x4EB9, 0x002F, 0xFC00}},
+        {0x2FFC00, {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF}, {0x2F08, 0x0C79, 0x0030, 0x00FF, 0xA686, 0x6502, 0x5D88, 0x23C8, 0x00FF, 0xA694, 0x205F, 0x4E75}},
+        {0x24AF06, {0xFFF0}, {0xFFC0}},
         // Sprite pieces right of the screen are not sent to the VDP (x < $1BF, 447 = 319 px on screen): allow 48 px more.
         {0x248A06, {0x01BF}, {0x01EF}}, {0x248A50, {0x01BF}, {0x01EF}}, {0x248B66, {0x01BF}, {0x01EF}}, {0x248BB0, {0x01BF}, {0x01EF}},
     };
