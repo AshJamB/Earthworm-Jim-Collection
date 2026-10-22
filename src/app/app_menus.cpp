@@ -138,7 +138,10 @@ void App::open_credits(bool from_launcher) {
         it.value_text = [shown]() { return std::string(shown); };
         return it;
     };
-    p.items.push_back(MenuItem::header("Earthworm Jim Collection by Ash Brittain"));
+    p.items.push_back(MenuItem::header("Earthworm Jim Collection by AshJam (Ash Brittain)"));
+    p.items.push_back(link("All My Links", "ash.jamtv.co.uk", "https://ash.jamtv.co.uk"));
+    p.items.push_back(link("Developer Site", "jamshark.co.uk", "https://jamshark.co.uk"));
+    p.items.push_back(link("Instagram", "@ashjamgram", "https://www.instagram.com/ashjamgram"));
     p.items.push_back(link("GitHub", "AshJamB/Earthworm-Jim-Collection", "https://github.com/AshJamB/Earthworm-Jim-Collection"));
     p.items.push_back(MenuItem::action("Check for Updates", [this]() { check_for_updates(true); },
                                        "Looks for a newer release on GitHub."));
