@@ -28,6 +28,9 @@ BTN = {'UP': 0x01, 'DOWN': 0x02, 'LEFT': 0x04, 'RIGHT': 0x08,
        'B': 0x10, 'C': 0x20, 'A': 0x40, 'START': 0x80}
 
 
+_PATH_ENC = 'mbcs' if sys.platform == 'win32' else 'utf-8'   # how the DLL / .so wants file names
+
+
 def _load():
     for p in _DLL_CANDIDATES:
         if p and os.path.exists(p):
@@ -98,7 +101,7 @@ if hasattr(_dll, 'mdt_view_b'):
 
 class MD:
     def __init__(self, rom=EWJ1):
-        self.h = _dll.mdt_create(rom.encode('mbcs'))
+        self.h = _dll.mdt_create(rom.encode(_PATH_ENC))
         if not self.h:
             raise RuntimeError('failed to load ' + rom)
         self.rom_path = rom
@@ -227,7 +230,7 @@ class MD:
 
     def png(self, path, scale=2):
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
-        return _dll.mdt_save_png(self.h, path.encode('mbcs'), scale)
+        return _dll.mdt_save_png(self.h, path.encode(_PATH_ENC), scale)
 
     def debug_layers(self, mask):
         """Test only: render just these layers (bit 0 plane A, bit 1 plane B, bit 2 sprites)."""

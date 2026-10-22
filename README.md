@@ -11,8 +11,9 @@ The games run from **your own copies of the original ROMs**. This repository con
 
 ## Status
 
-Early scaffold. Both games are recognised by CRC32 and run unmodified. Not yet implemented:
-widescreen, cheats, level select, music player track lists, achievements (see `src/game/ewj1.cpp` and `ewj2.cpp`).
+Early development (v0.2.0). Both games are recognised by CRC32 and run. Cheats work (infinite health, lives and ammo).
+Not yet implemented: widescreen, level select, music player track lists, Earthworm Jim achievements (see
+`src/game/ewj1.cpp` and `ewj2.cpp`, and `docs/`).
 
 ## ROMs
 

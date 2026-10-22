@@ -11,7 +11,11 @@
 #include <fstream>
 #include <iterator>
 
+#ifdef _WIN32
 #define API extern "C" __declspec(dllexport)
+#else
+#define API extern "C" __attribute__((visibility("default")))   // lets the core be built as a Linux .so for analysis
+#endif
 
 namespace {
 struct BpHit { uint32_t frame, pc, sr, pad; uint32_t regs[16]; };

@@ -55,3 +55,11 @@ Capstone prints absolute-short RAM addresses as e.g. `$f400.w` meaning `$FFF400`
 - World of Illusion (1 MB ROM, supports 2 players simultaneously): gameplay planes 64x32 cells, per-line
   hscroll, no window plane; the HUD (character icon, hearts, TRIES) is drawn with sprites at the top.
   Its VBlank handler is at $D74 (dispatch on $FFFFD2); HINT vector points to RAM ($FFAF80).
+
+## Running the tools on Linux
+`src/tools/mdtool.cpp` also builds as a shared library for analysis away from Windows:
+
+    g++ -std=c++17 -O2 -shared -fPIC -Isrc src/core/*.cpp src/game/common.cpp src/game/ewj1.cpp src/game/ewj2.cpp src/tools/mdtool.cpp -o libmdtool.so
+    MDTOOL_DLL=./libmdtool.so python3 your_script.py
+
+`tests/cheat_test.cpp` (see its header) checks the cheats against the real ROMs without any Python.
