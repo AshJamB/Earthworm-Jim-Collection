@@ -27,7 +27,7 @@ static void run(MegaDrive& md, int n, GameModule* m, const GameConfig& cfg) {
 
 // Level select: each stage must load something different (checked by hashing video memory), and the game's own
 // level byte must read back as the stage that was asked for.
-static void test_levels(MegaDrive& md, GameModule* m, uint32_t level_addr) {
+static void test_levels(MegaDrive& md, GameModule* m, uint32_t level_addr, const std::vector<int>& values) {
     const std::vector<LevelEntry> lv = m->levels();
     CHECK(!lv.empty());
     GameConfig cfg;
@@ -40,14 +40,14 @@ static void test_levels(MegaDrive& md, GameModule* m, uint32_t level_addr) {
         for (uint8_t b : md.vdp.vram) h = (h ^ b) * 1099511628211ull;
         if (h != prev) distinct++;
         prev = h;
-        CHECK(md.ram8(level_addr) == (uint8_t)i);
+        CHECK(md.ram8(level_addr) == (uint8_t)(values.empty() ? i : values[i]));
     }
     printf("%s level select: %d stages listed, %d of 5 samples looked different\n", m->id(), (int)lv.size(), distinct);
     CHECK(distinct >= 4);
     CHECK(!m->start_level(md, cfg, (int)lv.size(), 0));   // out of range is refused
 }
 
-static void test_game(const char* path, GameModule* m, uint32_t ammo, uint32_t health, uint32_t lives, uint32_t level_addr, int starts, bool unpause) {
+static void test_game(const char* path, GameModule* m, uint32_t ammo, uint32_t health, uint32_t lives, uint32_t level_addr, int starts, bool unpause, std::vector<int> values = {}) {
     std::ifstream f(path, std::ios::binary);
     if (!f) { printf("skip %s (ROM not found)\n", path); return; }
     std::vector<uint8_t> rom((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
@@ -76,14 +76,14 @@ static void test_game(const char* path, GameModule* m, uint32_t ammo, uint32_t h
             CHECK(text(ammo, 4) != "1000");   // firing used ammo
             CHECK(md.ram8(lives) == '3');
         }
-        if (cheats == 0) { MegaDrive lv; CHECK(lv.load_rom(rom)); test_levels(lv, m, level_addr); }
+        if (cheats == 0) { MegaDrive lv; CHECK(lv.load_rom(rom)); test_levels(lv, m, level_addr, values); }
     }
 }
 
 int main(int argc, char** argv) {
     std::unique_ptr<GameModule> m1(create_ewj1_module()), m2(create_ewj2_module());
     if (argc > 1) test_game(argv[1], m1.get(), 0xFFFBF4, 0xFFFBFC, 0xFFA6C8, 0xFFA692, 3, false);
-    if (argc > 2) test_game(argv[2], m2.get(), 0xFFFADE, 0xFFFAFC, 0xFFA1EA, 0xFFA1A6, 10, true);
+    if (argc > 2) test_game(argv[2], m2.get(), 0xFFFADE, 0xFFFAFC, 0xFFA1EA, 0xFFA1A6, 10, true, {0,1,10,2,9,5,3,6,7,8,14,15,4,11,13,12,16});
     if (failures == 0) printf("cheat_test: all checks passed\n");
     return failures ? 1 : 0;
 }

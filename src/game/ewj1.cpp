@@ -13,7 +13,7 @@ constexpr uint32_t HEALTH = 0xFFFBFC;    // 4 characters, "0100" at full health
 constexpr uint32_t LIVES = 0xFFA6C8;     // 1 character, '3' at the start of a game
 constexpr uint32_t LEVEL = 0xFFA692;     // level number (byte): the index into the game's own "START ON LEVEL" list
 
-struct Stage { const char* group; const char* name; };
+struct Stage { const char* group; const char* name; };   // list position == LEVEL value (the game steps through it with +1)
 // In the order of the developers' hidden debug menu (David Perry's Private Cheat Mode, ROM $1B6722); the index is
 // the value of LEVEL. Values above 28 load nothing.
 const Stage kStages[] = {
