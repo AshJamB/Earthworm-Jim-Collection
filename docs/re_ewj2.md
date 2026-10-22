@@ -24,5 +24,26 @@ Same scheme as the first game: ASCII decimal text counted on directly.
 ## Cheats (src/game/ewj2.cpp)
 Identical to the first game, with these addresses. Tested by `tests/cheat_test.cpp`.
 
-## Still to find
-Level select, music player (sound driver), widescreen.
+## Still to find (remaining)
+Music player (sound driver), widescreen.
+
+## Level select (src/game/ewj2.cpp)
+The level number is the byte at **`$FFA1A6`**, taken by the loader when START is pressed on the title screen
+(the fourth START: SEGA logo, legal text, Shiny logo, then "Press Start"). `start_level` plays the start-up from
+power on, writes the byte before that press and runs 500 frames afterwards.
+
+Found the same way as in the first game (set each byte of `$FFA100-$FFA300` to 1 before the press and compare
+video memory). Values 0-16 load stages and 17 and above a black screen. The names are from the game's hidden debug
+menu ("SUPER CHEAT SCREEN"), whose START ON LEVEL list is stored as 16-character strings at ROM `$1C0A1D` in the same
+order as the byte's values:
+
+| Value | Stage | Value | Stage |
+| ----- | ----- | ----- | ----- |
+| 0 | 1 Tangerines | 9 | 6 Villi People |
+| 1 | 1B Granny Chair | 10 | 7 Lorenzen's Soil |
+| 2-4 | 2A-2C Puppy Love 1-3 | 11 | 8 Level Ate |
+| 5 | 3 The Flyin' King | 12 | 8A Flamin' Yawn |
+| 6 | 4 Udderly Abducted | 13 | 8B Forked |
+| 7 | 5A Inflated Head | 14 | 9 ISO 9000 |
+| 8 | 5C Hammer Head | 15 | 9B Door Chase |
+| 16 | 10 See Jim Run | | |

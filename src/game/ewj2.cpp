@@ -1,5 +1,5 @@
 // Earthworm Jim 2 (USA) - enhancement module.
-// ROM identification and cheats. Widescreen and level select are added as they are reverse engineered;
+// ROM identification, cheats and level select. Widescreen is added once it is reverse engineered;
 // addresses and how they were found: docs/re_ewj2.md.
 #include "game.h"
 #include "common.h"
@@ -11,6 +11,31 @@ namespace {
 constexpr uint32_t AMMO = 0xFFFADE;      // 4 characters, "1000" at the start of a level (the plasma blaster)
 constexpr uint32_t HEALTH = 0xFFFAFC;    // 4 characters, "0100" at full health
 constexpr uint32_t LIVES = 0xFFA1EA;     // 1 character, '3' at the start of a game
+constexpr uint32_t LEVEL = 0xFFA1A6;     // level number (byte): the index into the game's own "START ON LEVEL" list
+
+struct Stage { const char* group; const char* name; };
+// In the order of the developers' hidden debug menu (ROM $1C0A1D); the index is the value of LEVEL. Values above 16
+// load nothing.
+const Stage kStages[] = {
+    {"Level 1 - Anything but Tangerines", "1  Tangerines"},
+    {"Level 1 - Anything but Tangerines", "1B  Granny Chair"},
+    {"Level 2 - Puppy Love", "2A  Puppy Love 1"},
+    {"Level 2 - Puppy Love", "2B  Puppy Love 2"},
+    {"Level 2 - Puppy Love", "2C  Puppy Love 3"},
+    {"Level 3 - The Flyin' King", "3  The Flyin' King"},
+    {"Level 4 - Udderly Abducted", "4  Udderly Abducted"},
+    {"Level 5 - Inflated Head", "5A  Inflated Head"},
+    {"Level 5 - Inflated Head", "5C  Hammer Head"},
+    {"Level 6 - Villi People", "6  Villi People"},
+    {"Level 7 - Lorenzen's Soil", "7  Lorenzen's Soil"},
+    {"Level 8 - Level Ate", "8  Level Ate"},
+    {"Level 8 - Level Ate", "8A  Flamin' Yawn"},
+    {"Level 8 - Level Ate", "8B  Forked"},
+    {"Level 9 - ISO 9000", "9  ISO 9000"},
+    {"Level 9 - ISO 9000", "9B  Door Chase"},
+    {"Level 10 - See Jim Run", "10  See Jim Run"},
+};
+constexpr int kStageCount = (int)(sizeof(kStages) / sizeof(kStages[0]));
 
 bool is_digits(const MegaDrive& md, uint32_t a, int n) {
     for (int i = 0; i < n; i++) {
@@ -47,6 +72,30 @@ public:
             {"inf_lives", "Infinite Lives", "The lives counter stays at 9.", {}},
             {"inf_ammo", "Infinite Ammo", "The plasma blaster never runs out.", {}},
         };
+    }
+
+    std::vector<LevelEntry> levels() const override {
+        std::vector<LevelEntry> v;
+        for (const Stage& s : kStages) v.push_back({s.group, s.name, 0});
+        return v;
+    }
+
+    // Plays the game's own start-up from power-on (logos, title, "press start") and, just before the START that
+    // begins the level, writes the stage number: the game's loader then takes that stage as if it were the first.
+    bool start_level(MegaDrive& md, const GameConfig& cfg, int index, int variant) override {
+        (void)cfg; (void)variant;
+        if (index < 0 || index >= kStageCount) return false;
+        md.power_on();
+        auto run = [&](int n) { for (int i = 0; i < n; i++) md.run_frame(); };
+        auto tap = [&](int after) { md.set_pad(0, MD_START); run(4); md.set_pad(0, 0); run(after); };
+        run(400);
+        tap(150);
+        tap(150);
+        tap(150);
+        run(60);
+        md.set_ram8(LEVEL, (uint8_t)index);
+        tap(500);
+        return true;
     }
 
     // Applied before every frame. Each write is made only while the game shows its counters as digits, so the

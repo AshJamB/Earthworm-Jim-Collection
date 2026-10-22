@@ -11,8 +11,9 @@ The games run from **your own copies of the original ROMs**. This repository con
 
 ## Status
 
-Early development (v0.2.0). Both games are recognised by CRC32 and run. Cheats work (infinite health, lives and ammo).
-Not yet implemented: widescreen, level select, music player track lists, Earthworm Jim achievements (see
+Early development (v0.3.0). Both games are recognised by CRC32 and run. Cheats (infinite health, lives and ammo) and level
+select (29 stages in Earthworm Jim, 17 in Earthworm Jim 2) work.
+Not yet implemented: widescreen, music player track lists, Earthworm Jim achievements (see
 `src/game/ewj1.cpp` and `ewj2.cpp`, and `docs/`).
 
 ## ROMs

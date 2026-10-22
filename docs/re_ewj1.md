@@ -28,6 +28,31 @@ has already started still plays. Pits and scripted deaths still cost a life.
 
 Tested headlessly by `tests/cheat_test.cpp` against the real ROM.
 
-## Still to find
-Level index and the transition code (level select), the sound driver request slots (music player), and the
-sprite/despawn/camera logic (widescreen).
+## Still to find (remaining)
+The sound driver request slots (music player), and the sprite/despawn/camera logic (widescreen).
+
+## Level select (src/game/ewj1.cpp)
+The level number is the byte at **`$FFA692`**. The game's loader takes it when START is pressed on the title screen, so
+writing a stage number just before that press starts that stage; `start_level` plays the game's own start-up from power
+on (400 frames, START, 150, START, 60), writes the byte, then presses START and runs 600 frames.
+
+Found by saving a state before the final START, then setting each byte of `$FFA500-$FFA900` to 1 in turn and
+comparing video memory 300 frames later; only `$FFA692` produced a different level.
+
+Values 0-28 load stages; 29 and above load a black screen. The names are from the game's own hidden debug menu
+("David Perry's Private Cheat Mode": pause, then Left+A, B, B, A, Right+A, B, B, A), whose START ON LEVEL list is
+stored as 16-character strings at ROM `$1B6722`, in the same order as the byte's values:
+
+| Value | Stage | Value | Stage |
+| ----- | ----- | ----- | ----- |
+| 0 | 1 New Junk City | 15 | 8B Pod Races |
+| 1 | 2A Hell or Heck? | 16-22 | 9A-9G Asteroids 1-7 |
+| 2 | 2B Snowman Boss | 23-27 | 10A-10E Darkness 1-5 |
+| 3 | 2C Evil Boss | 28 | 9P Psy-Crow! |
+| 4-6 | 3A-3C Bungee 1-3 | 7 | 4 Peter Puppy |
+| 8 | 5 Slug for a Butt | 9 | 5B Helicopter |
+| 10 | 6A Prof's Lab | 11 | 6C Chicken Fly |
+| 12 | 6D Naked Worm | 13 | 7 Intestines |
+| 14 | 8A Sea Tunnels | | |
+
+The same menu also offers CHEAT MODE (invincibility), FREEZEABILITY and MAP VIEW MODE.
