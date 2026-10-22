@@ -84,11 +84,14 @@ std::vector<RomPatch> widescreen_patches(const GameConfig& cfg) {
         {0x2482CA, {0x0016}, {0x0018}},   // row drawn below: 23 -> 25 columns
         {0x2483CA, {0x0016}, {0x0018}},   // row drawn above: 23 -> 25 columns
         {0x24AFCC, {0x0016}, {0x0018}},   // enemies placed with a new row: 23 -> 25 columns
+        // Sprite pieces right of the screen are not sent to the VDP (x < $1BF, 447 = 319 px on screen): allow 48 px more.
+        {0x248A06, {0x01BF}, {0x01EF}}, {0x248A50, {0x01BF}, {0x01EF}}, {0x248B66, {0x01BF}, {0x01EF}}, {0x248BB0, {0x01BF}, {0x01EF}},
     };
 }
 
 class EarthwormJim1 : public GameModule {
     EdgeFill fill_;
+    uint8_t fill_level_ = 0xFF;   // the level fill_ has been following
 public:
     const char* id() const override { return "ewj1"; }
     const char* title() const override { return "Earthworm Jim"; }
@@ -157,7 +160,9 @@ public:
     // title and menu screens (which reuse the memory) are left alone.
     void pre_frame(MegaDrive& md, const GameConfig& cfg) override {
         if (cfg.ext > 0 && is_digits(md, HEALTH, 4)) refresh_edge_strips(md, kMapLayer, cfg.ext);   // widescreen: the strips beside the screen
-        fill_.run(md, cfg.ext, true);   // widescreen: carry the background past its own edges
+        // widescreen: carry the background past its own edges (start afresh in each level and outside levels)
+        if (is_digits(md, HEALTH, 4) && md.ram8(LEVEL) == fill_level_) fill_.run(md, cfg.ext, true);
+        else { fill_.reset(); fill_level_ = md.ram8(LEVEL); }
         const bool hud = is_digits(md, HEALTH, 4);
         const bool dead = hud && md.ram8(HEALTH) == '0' && md.ram8(HEALTH + 1) == '0' && md.ram8(HEALTH + 2) == '0' &&
                           md.ram8(HEALTH + 3) == '0';   // already at 0%: the death has started, leave it

@@ -61,3 +61,6 @@ The cells left of the screen are redrawn each frame like in the first game (`ref
 $FFA182/$FFA184, the table at $FFB262 and row offsets at $FFB4E6; plane B (only while $FFFBB2 is set) uses $FFA18E/$FFA190,
 $FFB362 and $FFB676; both use the stride at $FFA166, the metatile table pointer at $FFA1D0 and give tile 0 at or past the
 limit at $FF9416. Skipped while $FFFF15 is set.
+
+The same sprite cull (`cmpi.w #$1BF,d3`) is at $255CF0, $255D52, $255DB4, $255E1C, $255E7C, $255EE4, $255F4C and $255FBA (immediates
+patched to $1EF). The camera is up to 18 px either side of the snapped position ($FFA182).

@@ -7,6 +7,7 @@
 //  - the extension is not an empty strip where it is not masked (reported, not failed: some levels are black),
 //  - moving right for a while keeps both of those true (the patched scenery streaming works),
 // and that the extension is closed (full masks) outside a level.
+#include <algorithm>
 #include <cstdio>
 #include <fstream>
 #include <iterator>
@@ -56,6 +57,86 @@ static double busy(const Shot& s, int x0, int x1) {
 // the game itself drew for the columns inside the view.
 static const StreamLayer kLayer1 = {0xFFA686, 0xFFA688, 0xFFB396, 0xFFB548, true, 2, 0xFFA66C, 0xFFA6B8, 0};
 static const StreamLayer kLayer2 = {0xFFA182, 0xFFA184, 0xFFB262, 0xFFB4E6, false, 3, 0xFFA166, 0xFFA1D0, 0xFF9416};
+
+
+// Walks right and left, jumps, and checks after every frame's set-up that the cells of the map layer in the strips beside the
+// screen are what the game's drawing rules give (no stale map left in the ring), and that the background (plane B) there does
+// not change while the camera stands still (no flicker), and that sprites reach into the right strip.
+static void test_strips(const std::vector<uint8_t>& rom, GameModule* m, const StreamLayer& L, uint32_t camx, int level) {
+    const int ext = 40;
+    MegaDrive md;
+    CHECK(md.load_rom(rom));
+    GameConfig cfg;
+    cfg.ext = ext;
+    cfg.cheats["inf_health"] = cfg.cheats["inf_lives"] = true;
+    md.vdp.ext = ext; md.vdp.sprite_limit = false; md.vdp.ignore_left_blank = true;
+    m->configure(md, cfg);
+    CHECK(m->start_level(md, cfg, level, 0));
+    md.vdp.ext = ext; md.vdp.sprite_limit = false; md.vdp.ignore_left_blank = true;
+    m->configure(md, cfg);
+    int frames = 0, stale = 0, max_sprite_x = 0;
+    const struct { int pad, n; } seq[] = {{0x08, 300}, {0x04, 300}, {0x08, 200}, {0x18, 150}, {0x04, 250}};
+    for (const auto& s : seq)
+        for (int i = 0; i < s.n; i++) {
+            md.set_pad(0, (uint16_t)s.pad);
+            m->pre_frame(md, cfg);
+            FrameInfo fi;
+            m->post_frame(md, cfg, fi);
+            if (fi.gameplay) {
+                frames++;
+                const int cam = (int16_t)md.ram16(camx), snap = (int16_t)md.ram16(L.snap_x);
+                int d = 0;
+                for (int j = -6; j <= 26; j++) {
+                    const int x = snap + 16 * j;
+                    if (x < 0) continue;
+                    const bool left = x + 16 > cam - ext + fi.mask_left && x < cam;
+                    const bool right = x + 16 > cam + 320 && x < cam + 320 + ext - fi.mask_right;
+                    if (left || right) d += refresh_left_columns(md, L, 1, true, j, +1);
+                }
+                if (d) stale++;
+            }
+            md.run_frame();
+            // sprite table: highest x of a sprite on screen
+            const uint32_t sat = (uint32_t)(md.vdp.reg[5] & 0x7F) << 9;
+            for (int n = 0, idx = 0; n < 80; n++) {
+                const uint32_t a = sat + idx * 8;
+                const int y = ((md.vdp.vram[a] << 8) | md.vdp.vram[a + 1]) & 0x3FF, x = ((md.vdp.vram[a + 6] << 8) | md.vdp.vram[a + 7]) & 0x1FF;
+                if (y > 0 && x > max_sprite_x) max_sprite_x = x;
+                idx = md.vdp.vram[a + 3] & 0x7F;
+                if (!idx) break;
+            }
+        }
+    printf("%s level %d strips: %d frames, %d with stale map cells, highest sprite x %d\n", m->id(), level, frames, stale, max_sprite_x);
+    CHECK(stale == 0);
+    CHECK(max_sprite_x > 447);   // objects are drawn right of the 4:3 edge now
+
+    // flicker: with the camera standing still the background in the strips stays as it is (apart from the game's own animation)
+    md.vdp.debug_layers = 2;
+    auto strips = [&]() {
+        std::vector<uint16_t> v;
+        for (int y = 0; y < md.vdp.fb_lines; y++) {
+            for (int x = 0; x < ext; x++) v.push_back(md.vdp.fb[y][x] & 0x7FF);
+            for (int x = md.vdp.fb_width - ext; x < md.vdp.fb_width; x++) v.push_back(md.vdp.fb[y][x] & 0x7FF);
+        }
+        return v;
+    };
+    for (int i = 0; i < 80; i++) { md.set_pad(0, 0); m->pre_frame(md, cfg); md.run_frame(); }
+    std::vector<uint16_t> prev = strips();
+    double worst = 0;
+    for (int i = 0; i < 60; i++) {
+        md.set_pad(0, 0);
+        m->pre_frame(md, cfg);
+        md.run_frame();
+        std::vector<uint16_t> now = strips();
+        size_t diff = 0;
+        for (size_t k = 0; k < now.size(); k++) diff += now[k] != prev[k];
+        worst = std::max(worst, (double)diff / now.size());
+        prev = now;
+    }
+    md.vdp.debug_layers = 7;
+    printf("%s level %d: background in the strips changes by at most %.3f per frame while standing still\n", m->id(), level, worst);
+    CHECK(worst < 0.2);
+}
 
 static void test_game(const char* path, GameModule* m, bool right_moves) {
     std::ifstream f(path, std::ios::binary);
@@ -122,6 +203,8 @@ static void test_game(const char* path, GameModule* m, bool right_moves) {
     }
     printf("%s widescreen: %d levels, %d with a changed middle, %d with an empty strip\n", m->id(), count, bad_center, empty_ext);
     CHECK(bad_center == 0);
+
+    test_strips(rom, m, m->id()[3] == '1' ? kLayer1 : kLayer2, m->id()[3] == '1' ? 0xFFA676 : 0xFFA172, 0);
 
     // outside a level the extension is closed
     MegaDrive md;

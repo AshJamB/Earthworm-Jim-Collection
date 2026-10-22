@@ -39,16 +39,17 @@ bool call_68k(MegaDrive& md, uint32_t entry, int max_cycles = 2000000);
 // Widescreen background fill: a game that only draws the 40 cells it shows leaves the cells just outside the screen
 // empty (black) or holding leftovers. This fills them with a mirror image of the cells next to them (flipped tiles),
 // so the extension carries on the scenery. It works on a plane that scrolls as a whole (horizontal scroll mode 0, 64
-// cells wide). A plane that has stood still for a few frames is a single picture (a sky): the cells beside it are all
+// cells wide). A plane that has not scrolled at all since the level began (reset()) is a single picture (a sky): the cells beside it are all
 // replaced, and put back when the plane moves again. A moving plane only has its empty cells beside it filled.
 class EdgeFill {
 public:
     void run(MegaDrive& md, int ext, bool plane_b);
-    void reset() { saved_.clear(); still_ = 0; last_scroll_ = -1; }
+    void reset() { saved_.clear(); still_ = 0; last_scroll_ = -1; moved_ = false; }
 private:
     struct Saved { uint32_t addr; uint16_t orig, put; };
     std::vector<Saved> saved_;
     int still_ = 0, last_scroll_ = -1;
+    bool moved_ = false;   // the plane has scrolled since reset(): it is a scrolling background, not a single picture
 };
 
 // The games draw their scrolling level maps into a 64-cell ring in VRAM one 16-px metatile column (or row) at a time,

@@ -170,9 +170,10 @@ void EdgeFill::run(MegaDrive& md, int ext, bool plane_b) {
     const uint32_t base = plane_b ? (uint32_t)(v.reg[4] & 7) << 13 : (uint32_t)(v.reg[2] & 0x38) << 10;
     const uint32_t hs = ((uint32_t)(v.reg[13] & 0x3F) << 10) + (plane_b ? 2 : 0);
     const int scroll = ((v.vram[hs] << 8) | v.vram[hs + 1]) & 0x3FF;
+    if (last_scroll_ >= 0 && scroll != last_scroll_) moved_ = true;
     still_ = scroll == last_scroll_ ? std::min(still_ + 1, 1000) : 0;
     last_scroll_ = scroll;
-    const bool picture = still_ >= 8;
+    const bool picture = still_ >= 8 && !moved_;
     if (!picture && !saved_.empty()) restore();
     const int c0 = (((-scroll) & 0x3FF) >> 3) & 63;                      // first visible cell column
     const int n = (ext + 7) / 8 + 1;                                     // cells to fill on each side
@@ -261,9 +262,11 @@ bool refresh_left_strip(MegaDrive& md, const StreamLayer& layer, int cols) {
 
 bool refresh_edge_strips(MegaDrive& md, const StreamLayer& layer, int ext) {
     if (refresh_left_columns(md, layer, 2, true, 1, +1) != 0) return false;
-    const int n = (ext + 15) / 16;
+    // The camera is up to ~18 px either side of the snapped position the game draws from, so the strips start a
+    // column further out than `ext` alone needs.
+    const int n = (ext + 15) / 16 + 1;
     refresh_left_columns(md, layer, n);                       // left of the view
-    refresh_left_columns(md, layer, n + 3, false, 19, +1);    // right of the view (from the last columns inside it)
+    refresh_left_columns(md, layer, n + 3, false, 18, +1);    // right of the view (from the last columns inside it)
     return true;
 }
 

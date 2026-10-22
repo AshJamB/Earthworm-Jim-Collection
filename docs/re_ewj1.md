@@ -74,3 +74,7 @@ camera) so the module redraws them each frame with the game's own rule (`refresh
 `common.h`): for the 16 map rows from $FFA688, the metatile word at the row pointer ($FFB548 table) + column x 2 selects
 four words from the table at $FFA6B8; each goes to the VRAM address the long at $FFB396 + 4 x cell row gives (OR the column
 byte offset, then the two halves swapped into a VDP command). Checked against the cells the game draws itself.
+
+Sprite pieces are only sent to the VDP when their x (screen x + 128) is below $1BF: `cmpi.w #$1BF,d3` at $248A04, $248A4E,
+$248B64 and $248BB0 (immediates patched to $1EF so objects show in the right strip). The camera is up to 15 px either side
+of the snapped position ($FFA686), which the strip redrawing allows for.

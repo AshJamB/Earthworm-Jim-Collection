@@ -80,11 +80,15 @@ std::vector<RomPatch> widescreen_patches(const GameConfig& cfg) {
         {0x253554, {0x0016}, {0x0018}},   //   stop 22 -> 24 columns before the map end
         {0x25367E, {0x0016}, {0x0018}},   // plane B row drawn below: 23 -> 25 columns
         {0x253794, {0x0016}, {0x0018}},   // plane B row drawn above: 23 -> 25 columns
+        // Sprite pieces right of the screen are not sent to the VDP (x < $1BF, 447 = 319 px on screen): allow 48 px more.
+        {0x255CF2, {0x01BF}, {0x01EF}}, {0x255D54, {0x01BF}, {0x01EF}}, {0x255DB6, {0x01BF}, {0x01EF}}, {0x255E1E, {0x01BF}, {0x01EF}},
+        {0x255E7E, {0x01BF}, {0x01EF}}, {0x255EE6, {0x01BF}, {0x01EF}}, {0x255F4E, {0x01BF}, {0x01EF}}, {0x255FBC, {0x01BF}, {0x01EF}},
     };
 }
 
 class EarthwormJim2 : public GameModule {
     EdgeFill fill_;
+    uint8_t fill_level_ = 0xFF;   // the level fill_ has been following
 public:
     const char* id() const override { return "ewj2"; }
     const char* title() const override { return "Earthworm Jim 2"; }
@@ -158,7 +162,9 @@ public:
             refresh_edge_strips(md, kMapLayerA, cfg.ext);
             if (md.ram8(0xFFFBB2)) refresh_edge_strips(md, kMapLayerB, cfg.ext);
         }
-        fill_.run(md, cfg.ext, true);   // widescreen: carry the background past its own edges
+        // widescreen: carry the background past its own edges (start afresh in each level and outside levels)
+        if (is_digits(md, HEALTH, 4) && md.ram8(LEVEL) == fill_level_) fill_.run(md, cfg.ext, true);
+        else { fill_.reset(); fill_level_ = md.ram8(LEVEL); }
         const bool hud = is_digits(md, HEALTH, 4);
         const bool dead = hud && md.ram8(HEALTH) == '0' && md.ram8(HEALTH + 1) == '0' && md.ram8(HEALTH + 2) == '0' &&
                           md.ram8(HEALTH + 3) == '0';   // already at 0%: the death has started, leave it
