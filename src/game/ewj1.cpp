@@ -142,7 +142,7 @@ public:
     // ewj_jukebox_boot): $16 stops everything, $10 + id starts a tune or effect. Which ids are tunes was found by playing
     // every id (0-127) on a parked 68000 and seeing how long it sounds: those that loop are the level tunes, a few run for
     // 4-9 seconds (jingles), everything else is a sound effect. Names: the soundtrack CD's titles (Tommy Tallarico's Earthworm Jim 1 / 2 albums) where the tune could be matched to the level
-    // it plays in, otherwise the level; the tunes that could not be identified are "Unnamed" (after the named ones). Order: as met in the game.
+    // it plays in, otherwise the level; tunes that could not be identified are left out of the list (they show as plain effects in the Sound Test). Order: as met in the game.
     std::vector<SoundEntry> sounds() const override {
         static const struct { int id; const char* name; int seconds; bool music; } kTunes[] = {
             {5, "Title Screen / New Junk City", 0, true},
@@ -157,17 +157,6 @@ public:
             {13, "Darkness (Darkworm Rag)", 0, true},
             {20, "Psy-Crow (Psycrow)", 0, true},
             {15, "Boss Theme / Continue", 0, true},
-            {7, "Unnamed Tune 7", 0, true},
-            {8, "Unnamed Tune 8", 0, true},
-            {10, "Unnamed Tune 10", 0, true},
-            {11, "Unnamed Tune 11", 0, true},
-            {12, "Unnamed Tune 12", 0, true},
-            {125, "Unnamed Tune 125", 0, true},
-            {14, "Unnamed Jingle 14", 9, true},
-            {16, "Unnamed Jingle 16", 4, true},
-            {17, "Unnamed Jingle 17", 5, true},
-            {27, "Unnamed Jingle 27", 8, true},
-            {65, "Unnamed Jingle 65", 34, true},
         };
         static const int kSilent[] = {19, 126, 127};   // ids that make no sound
         std::vector<SoundEntry> v;

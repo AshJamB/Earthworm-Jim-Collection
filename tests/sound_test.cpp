@@ -42,7 +42,9 @@ static void test_game(const char* path, GameModule* m) {
     for (const SoundEntry& e : list) {
         m->play_sound(md, e.id);
         const int first = loud_frames(md, e.music || e.name.rfind("Unnamed Tune", 0) == 0 ? 600 : 90);   // (some tunes open with a few quiet seconds)
-        if (first == 0) { printf("  id %d (%s) makes no sound\n", e.id, e.name.c_str()); dead++; }
+        int heard = first;
+        if (heard == 0) heard = loud_frames(md, 600);   // (a few tunes open with seconds of silence)
+        if (heard == 0) { printf("  id %d (%s) makes no sound\n", e.id, e.name.c_str()); dead++; }
         if (e.music && e.seconds == 0) { longest = std::max(longest, first); CHECK(first > 120); }   // a level tune keeps going
         m->stop_sound(md);
         loud_frames(md, 60);

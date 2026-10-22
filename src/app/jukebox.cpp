@@ -265,7 +265,8 @@ void Jukebox::draw(Video& v, float time, uint32_t accent) {
         if (sel) v.fill_round_rect({list.x + pad * 0.2f, y, list.w - pad * 0.4f, row * 0.94f}, row * 0.2f, with_alpha(accent, 0.28f));
         char num[16];
         if (list_[i].id < 0) snprintf(num, sizeof(num), "CD");   // a soundtrack track no tune names
-        else snprintf(num, sizeof(num), "%02X", list_[i].id);
+        else if (sfx_) snprintf(num, sizeof(num), "%d", list_[i].id);   // the Sound Test: the game's own sound number
+        else snprintf(num, sizeof(num), "%02d", i + 1);                 // the Music Player: track number in the list
         uint32_t col = sel ? 0xFFFFFFFF : 0xFFC9D0DC;
         float ty = y + (row - v.line_height(FontId::Body)) * 0.4f;
         v.draw_text(FontId::Small, list.x + pad * 0.5f, ty + v.line_height(FontId::Body) * 0.12f, num, 0xFF7C8598);
