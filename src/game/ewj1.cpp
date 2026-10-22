@@ -72,7 +72,7 @@ public:
     const char* rom_hint() const override { return "the Earthworm Jim (USA) ROM"; }
     const char* rom_names() const override { return "=EARTHWORMJIM"; }
     uint32_t accent_color() const override { return 0xFFE8B84A; }
-    int max_ext() const override { return 0; }   // no widescreen until it is reverse engineered
+    int max_ext() const override { return 40; }   // 16:9; wider needs the games' scenery streaming widened
 
     void configure(MegaDrive& md, const GameConfig& cfg) override {
         (void)md; (void)cfg;   // no ROM patches yet: cheats work on RAM
@@ -111,6 +111,7 @@ public:
     // Applied before every frame. Each write is made only while the game shows that counter as digits, so the
     // title and menu screens (which reuse the memory) are left alone.
     void pre_frame(MegaDrive& md, const GameConfig& cfg) override {
+        mirror_plane_edges(md, cfg.ext, true);   // widescreen: carry the background past its own edges
         const bool hud = is_digits(md, HEALTH, 4);
         const bool dead = hud && md.ram8(HEALTH) == '0' && md.ram8(HEALTH + 1) == '0' && md.ram8(HEALTH + 2) == '0' &&
                           md.ram8(HEALTH + 3) == '0';   // already at 0%: the death has started, leave it

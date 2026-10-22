@@ -36,6 +36,12 @@ void freeze_68k(MegaDrive& md);
 // CPU is parked again afterwards. Only the 68000 runs. Returns false if it hasn't returned after `max_cycles`.
 bool call_68k(MegaDrive& md, uint32_t entry, int max_cycles = 2000000);
 
+// Widescreen background fill: a game that only draws the 40 cells it shows leaves the cells just outside the screen
+// empty (black). Where a plane's cells beside the visible ones are all empty, this fills them with a mirror image of
+// the cells next to them (flipped tiles), so the extension carries on the scenery. `plane_b` picks plane B (the
+// background) or plane A. Does nothing unless the plane scrolls as a whole (horizontal scroll mode 0).
+void mirror_plane_edges(MegaDrive& md, int ext, bool plane_b);
+
 // HUD strip remapping for widescreen: the window-plane status bar is split into segments
 // that anchor to the left edge, the centre or the right edge of the widened screen; gaps are
 // filled with a repeated "filler" column span of the bar.

@@ -157,6 +157,38 @@ void hud_remap_window_line(VDP& vdp, int line, uint8_t* plane_a, uint8_t* plane_
     }
 }
 
+void mirror_plane_edges(MegaDrive& md, int ext, bool plane_b) {
+    if (ext <= 0) return;
+    VDP& v = md.vdp;
+    if ((v.reg[11] & 3) != 0) return;                                   // only whole-plane horizontal scroll
+    if ((v.reg[16] & 3) != 1) return;                                   // 64 cells wide
+    const uint32_t base = plane_b ? (uint32_t)(v.reg[4] & 7) << 13 : (uint32_t)(v.reg[2] & 0x38) << 10;
+    const uint32_t hs = ((uint32_t)(v.reg[13] & 0x3F) << 10) + (plane_b ? 2 : 0);
+    const int scroll = ((v.vram[hs] << 8) | v.vram[hs + 1]) & 0x3FF;
+    const int c0 = ((((-scroll) & 0x3FF)) >> 3) & 63;                    // first visible cell column
+    const int n = (ext + 7) / 8 + 1;                                     // cells to fill on each side
+    const int rows = 32;
+    auto cell = [&](int col, int row) -> uint16_t {
+        const uint32_t a = (base + ((row * 64 + (col & 63)) << 1)) & 0xFFFF;
+        return (uint16_t)((v.vram[a] << 8) | v.vram[(a + 1) & 0xFFFF]);
+    };
+    auto put = [&](int col, int row, uint16_t x) {
+        const uint32_t a = (base + ((row * 64 + (col & 63)) << 1)) & 0xFFFF;
+        v.vram[a] = (uint8_t)(x >> 8);
+        v.vram[(a + 1) & 0xFFFF] = (uint8_t)x;
+    };
+    auto empty = [&](int col) { for (int r = 0; r < rows; r++) if (cell(col, r) & 0x7FF) return false; return true; };
+    auto full = [&](int col) { for (int r = 0; r < 28; r++) if (!(cell(col, r) & 0x7FF)) return false; return true; };
+    auto mirror = [&](int dst, int src) { for (int r = 0; r < rows; r++) put(dst, r, cell(src, r) ^ 0x0800); };
+    // A side is filled only while it is empty and the cells next to it are a complete picture.
+    for (int j = 0; j < n; j++) {
+        const int dl = c0 - 1 - j, sl = c0 + j;
+        if (empty(dl) && full(sl)) mirror(dl, sl);
+        const int dr = c0 + 40 + j, sr = c0 + 39 - j;
+        if (empty(dr) && full(sr)) mirror(dr, sr);
+    }
+}
+
 void hud_remap_line(VDP& vdp, int line, uint8_t* plane_a, uint8_t* plane_b, HudLayout& layout) {
     if (line < layout.y0 || line >= layout.y1) return;
     const int ext = vdp.ext;
