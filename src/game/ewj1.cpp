@@ -1,6 +1,7 @@
 // Earthworm Jim (USA) - enhancement module.
 // ROM identification, cheats and level select. Widescreen is added once it is reverse engineered;
 // addresses and how they were found: docs/re_ewj1.md.
+#include <algorithm>
 #include "game.h"
 #include "common.h"
 #include "../core/md.h"
@@ -11,6 +12,8 @@ namespace {
 constexpr uint32_t AMMO = 0xFFFBF4;      // 4 characters, "1000" at the start of a level (the plasma blaster)
 constexpr uint32_t HEALTH = 0xFFFBFC;    // 4 characters, "0100" at full health
 constexpr uint32_t LIVES = 0xFFA6C8;     // 1 character, '3' at the start of a game
+constexpr uint32_t CAMERA_X = 0xFFA676;     // camera position in pixels (word); the left edge of the map is at 0
+constexpr uint32_t WORLD_W = 0xFFA670;       // map width in pixels (word)
 constexpr uint32_t LEVEL = 0xFFA692;     // level number (byte): the index into the game's own "START ON LEVEL" list
 
 struct Stage { const char* group; const char* name; };   // list position == LEVEL value (the game steps through it with +1)
@@ -49,6 +52,9 @@ const Stage kStages[] = {
 };
 constexpr int kStageCount = (int)(sizeof(kStages) / sizeof(kStages[0]));
 
+// Levels (LEVEL values) whose scenery does not go past the 4:3 screen: shown with black bars.
+constexpr uint8_t kArenas[] = {3};
+
 bool is_digits(const MegaDrive& md, uint32_t a, int n) {
     for (int i = 0; i < n; i++) {
         const uint8_t c = md.ram8(a + i);
@@ -61,7 +67,25 @@ void put_text(MegaDrive& md, uint32_t a, const char* s) {
     for (int i = 0; s[i]; i++) md.set_ram8(a + i, (uint8_t)s[i]);
 }
 
+// Widescreen: the game draws its level map and spawns the enemies 22 map columns (352 px) right of the camera, just
+// outside a 320 px screen. These move that to 24 columns (384 px) so scenery and enemies are in place before they
+// enter the wider view; the rows drawn when the camera moves up or down are made 2 columns wider to match.
+// Each patch is one immediate operand; docs/re_ewj1.md says where they are.
+std::vector<RomPatch> widescreen_patches(const GameConfig& cfg) {
+    if (cfg.ext <= 0) return {};
+    return {
+        {0x24817A, {0x0058}, {0x0060}},   // right column: VRAM column offset 44 -> 48 cells
+        {0x2481A0, {0x002C}, {0x0030}},   // right column: map offset 22 -> 24 columns
+        {0x2481B2, {0x0016}, {0x0018}},   // right column: stop 22 -> 24 columns before the map end
+        {0x24AF10, {0x0150}, {0x0170}},   // enemies placed with the right column: x offset 336 -> 368
+        {0x2482CA, {0x0016}, {0x0018}},   // row drawn below: 23 -> 25 columns
+        {0x2483CA, {0x0016}, {0x0018}},   // row drawn above: 23 -> 25 columns
+        {0x24AFCC, {0x0016}, {0x0018}},   // enemies placed with a new row: 23 -> 25 columns
+    };
+}
+
 class EarthwormJim1 : public GameModule {
+    EdgeFill fill_;
 public:
     const char* id() const override { return "ewj1"; }
     const char* title() const override { return "Earthworm Jim"; }
@@ -75,7 +99,10 @@ public:
     int max_ext() const override { return 40; }   // 16:9; wider needs the games' scenery streaming widened
 
     void configure(MegaDrive& md, const GameConfig& cfg) override {
-        (void)md; (void)cfg;   // no ROM patches yet: cheats work on RAM
+        apply_patches(md, widescreen_patches(cfg));
+    }
+    bool can_configure(const MegaDrive& md, const GameConfig& cfg) const override {
+        return patches_safe(md, widescreen_patches(cfg));
     }
 
     std::vector<CheatEntry> cheats() const override {
@@ -108,10 +135,25 @@ public:
         return true;
     }
 
+    // A level is on screen while the health counter holds digits (the menus and cutscenes reuse that memory as other
+    // data); only then does the app show the widescreen extension, elsewhere it stays black. Beyond the map's own
+    // edges the extension is blacked out, and a few single-screen arenas (their scenery stops at the 4:3 edges) keep
+    // black bars on both sides.
+    void post_frame(MegaDrive& md, const GameConfig& cfg, FrameInfo& info) override {
+        info.gameplay = is_digits(md, HEALTH, 4) && md.ram8(LIVES) >= '0' && md.ram8(LIVES) <= '9';
+        if (!info.gameplay || cfg.ext <= 0) return;
+        const uint8_t level = md.ram8(LEVEL);
+        for (uint8_t a : kArenas)
+            if (level == a) { info.mask_left = info.mask_right = cfg.ext; return; }
+        const int cam = md.ram16(CAMERA_X), world = md.ram16(WORLD_W);
+        info.mask_left = std::clamp(cfg.ext - cam, 0, cfg.ext);
+        info.mask_right = world > 0 ? std::clamp(cam + 320 + cfg.ext - world, 0, cfg.ext) : 0;
+    }
+
     // Applied before every frame. Each write is made only while the game shows that counter as digits, so the
     // title and menu screens (which reuse the memory) are left alone.
     void pre_frame(MegaDrive& md, const GameConfig& cfg) override {
-        mirror_plane_edges(md, cfg.ext, true);   // widescreen: carry the background past its own edges
+        fill_.run(md, cfg.ext, true);   // widescreen: carry the background past its own edges
         const bool hud = is_digits(md, HEALTH, 4);
         const bool dead = hud && md.ram8(HEALTH) == '0' && md.ram8(HEALTH + 1) == '0' && md.ram8(HEALTH + 2) == '0' &&
                           md.ram8(HEALTH + 3) == '0';   // already at 0%: the death has started, leave it

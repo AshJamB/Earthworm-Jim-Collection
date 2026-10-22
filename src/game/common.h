@@ -37,10 +37,19 @@ void freeze_68k(MegaDrive& md);
 bool call_68k(MegaDrive& md, uint32_t entry, int max_cycles = 2000000);
 
 // Widescreen background fill: a game that only draws the 40 cells it shows leaves the cells just outside the screen
-// empty (black). Where a plane's cells beside the visible ones are all empty, this fills them with a mirror image of
-// the cells next to them (flipped tiles), so the extension carries on the scenery. `plane_b` picks plane B (the
-// background) or plane A. Does nothing unless the plane scrolls as a whole (horizontal scroll mode 0).
-void mirror_plane_edges(MegaDrive& md, int ext, bool plane_b);
+// empty (black) or holding leftovers. This fills them with a mirror image of the cells next to them (flipped tiles),
+// so the extension carries on the scenery. It works on a plane that scrolls as a whole (horizontal scroll mode 0, 64
+// cells wide). A plane that has stood still for a few frames is a single picture (a sky): the cells beside it are all
+// replaced, and put back when the plane moves again. A moving plane only has its empty cells beside it filled.
+class EdgeFill {
+public:
+    void run(MegaDrive& md, int ext, bool plane_b);
+    void reset() { saved_.clear(); still_ = 0; last_scroll_ = -1; }
+private:
+    struct Saved { uint32_t addr; uint16_t orig, put; };
+    std::vector<Saved> saved_;
+    int still_ = 0, last_scroll_ = -1;
+};
 
 // HUD strip remapping for widescreen: the window-plane status bar is split into segments
 // that anchor to the left edge, the centre or the right edge of the widened screen; gaps are

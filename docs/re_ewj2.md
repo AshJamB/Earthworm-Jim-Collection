@@ -47,3 +47,12 @@ order as the byte's values:
 | 7 | 5A Inflated Head | 14 | 9 ISO 9000 |
 | 8 | 5C Hammer Head | 15 | 9B Door Chase |
 | 16 | 10 See Jim Run | | |
+
+
+## Widescreen (map streaming and enemy placement)
+
+Same engine as the first game, at a fixed offset of -$504 in work RAM (camera X $FFA172, Y $FFA174, snapped camera
+$FFA182/$FFA184, map width in px $FFA16C, level number $FFA1A6). Two scrolling layers each have a copy of the column and
+row routines: plane A at $2530xx-$2533xx and plane B at $2534xx-$2537xx. Enemies are placed by $256510/$25651A (columns,
+x offset $1150 = $1000 + 336) and $2565B4/$2565BE (rows). `widescreen_patches()` in `ewj2.cpp` lists the twelve
+immediates changed (22 -> 24 columns, 23 -> 25 for rows, offset $1150 -> $1170).

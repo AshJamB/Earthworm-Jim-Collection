@@ -157,35 +157,61 @@ void hud_remap_window_line(VDP& vdp, int line, uint8_t* plane_a, uint8_t* plane_
     }
 }
 
-void mirror_plane_edges(MegaDrive& md, int ext, bool plane_b) {
-    if (ext <= 0) return;
+void EdgeFill::run(MegaDrive& md, int ext, bool plane_b) {
     VDP& v = md.vdp;
-    if ((v.reg[11] & 3) != 0) return;                                   // only whole-plane horizontal scroll
-    if ((v.reg[16] & 3) != 1) return;                                   // 64 cells wide
+    auto restore = [&]() {
+        for (const Saved& s : saved_) {   // only the cells the game has not drawn over since
+            const uint16_t now = (uint16_t)((v.vram[s.addr] << 8) | v.vram[(s.addr + 1) & 0xFFFF]);
+            if (now == s.put) { v.vram[s.addr] = (uint8_t)(s.orig >> 8); v.vram[(s.addr + 1) & 0xFFFF] = (uint8_t)s.orig; }
+        }
+        saved_.clear();
+    };
+    if (ext <= 0 || (v.reg[11] & 3) != 0 || (v.reg[16] & 3) != 1) { restore(); still_ = 0; last_scroll_ = -1; return; }
     const uint32_t base = plane_b ? (uint32_t)(v.reg[4] & 7) << 13 : (uint32_t)(v.reg[2] & 0x38) << 10;
     const uint32_t hs = ((uint32_t)(v.reg[13] & 0x3F) << 10) + (plane_b ? 2 : 0);
     const int scroll = ((v.vram[hs] << 8) | v.vram[hs + 1]) & 0x3FF;
-    const int c0 = ((((-scroll) & 0x3FF)) >> 3) & 63;                    // first visible cell column
+    still_ = scroll == last_scroll_ ? std::min(still_ + 1, 1000) : 0;
+    last_scroll_ = scroll;
+    const bool picture = still_ >= 8;
+    if (!picture && !saved_.empty()) restore();
+    const int c0 = (((-scroll) & 0x3FF) >> 3) & 63;                      // first visible cell column
     const int n = (ext + 7) / 8 + 1;                                     // cells to fill on each side
     const int rows = 32;
+    auto addr = [&](int col, int row) { return (base + (uint32_t)((row * 64 + (col & 63)) << 1)) & 0xFFFF; };
     auto cell = [&](int col, int row) -> uint16_t {
-        const uint32_t a = (base + ((row * 64 + (col & 63)) << 1)) & 0xFFFF;
+        const uint32_t a = addr(col, row);
         return (uint16_t)((v.vram[a] << 8) | v.vram[(a + 1) & 0xFFFF]);
     };
     auto put = [&](int col, int row, uint16_t x) {
-        const uint32_t a = (base + ((row * 64 + (col & 63)) << 1)) & 0xFFFF;
+        const uint32_t a = addr(col, row);
         v.vram[a] = (uint8_t)(x >> 8);
         v.vram[(a + 1) & 0xFFFF] = (uint8_t)x;
     };
     auto empty = [&](int col) { for (int r = 0; r < rows; r++) if (cell(col, r) & 0x7FF) return false; return true; };
     auto full = [&](int col) { for (int r = 0; r < 28; r++) if (!(cell(col, r) & 0x7FF)) return false; return true; };
-    auto mirror = [&](int dst, int src) { for (int r = 0; r < rows; r++) put(dst, r, cell(src, r) ^ 0x0800); };
-    // A side is filled only while it is empty and the cells next to it are a complete picture.
+    auto mirror = [&](int dst, int src, bool keep) {
+        for (int r = 0; r < rows; r++) {
+            const uint16_t want = (uint16_t)(cell(src, r) ^ 0x0800), cur = cell(dst, r);
+            if (want == cur) continue;
+            if (keep) {
+                bool known = false;
+                for (const Saved& s : saved_) if (s.addr == addr(dst, r)) { known = true; break; }
+                if (!known) saved_.push_back({addr(dst, r), cur, want});
+                else for (Saved& s : saved_) if (s.addr == addr(dst, r)) s.put = want;
+            }
+            put(dst, r, want);
+        }
+    };
     for (int j = 0; j < n; j++) {
         const int dl = c0 - 1 - j, sl = c0 + j;
-        if (empty(dl) && full(sl)) mirror(dl, sl);
         const int dr = c0 + 40 + j, sr = c0 + 39 - j;
-        if (empty(dr) && full(sr)) mirror(dr, sr);
+        if (picture) {
+            if (full(sl)) mirror(dl, sl, true);
+            if (full(sr)) mirror(dr, sr, true);
+        } else {
+            if (empty(dl) && full(sl)) mirror(dl, sl, false);
+            if (empty(dr) && full(sr)) mirror(dr, sr, false);
+        }
     }
 }
 

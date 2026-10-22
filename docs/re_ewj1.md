@@ -56,3 +56,15 @@ stored as 16-character strings at ROM `$1B6722`, in the same order as the byte's
 | 14 | 8A Sea Tunnels | | |
 
 The same menu also offers CHEAT MODE (invincibility), FREEZEABILITY and MAP VIEW MODE.
+
+
+## Widescreen (map streaming and enemy placement)
+
+The level map is drawn into plane A one 16-px column at a time as the camera moves ($FFA676 = camera X, $FFA678 = Y;
+$FFA686/$FFA688 = the camera snapped to 16 px, stepped by the routines at $248024 (left/right) and $248228/$248330
+(down/up)). New columns come in 22 map columns (352 px) right of the camera; the enemies of that column are placed by the
+scan at $24AF0E (x offset $150 = 336, the column's 352 minus a 16 px bias) and, for rows, $24AF86/$24AF90 (23 columns).
+The object loop at $24A766 despawns an object when it is more than 120 px left of the camera or 440 px right of it, so
+a wider view does not lose them. `widescreen_patches()` in `ewj1.cpp` changes 22 -> 24 columns (map offset $2C -> $30,
+VRAM column offset $58 -> $60, map end test $16 -> $18), the enemy offset $150 -> $170 and the row widths $16 -> $18.
+The level's map size is at $FFA670 (px) and $FFA674; the level number is $FFA692.
