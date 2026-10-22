@@ -84,7 +84,9 @@ void hud_patches(std::vector<RomPatch>& p, const GameConfig& cfg) {
     p.push_back({0x248A06, {0x01BF}, {0x01EF}});
     p.push_back({0x248B66, {0x01BF}, {0x01EF}});
     if (!cfg.hud_anchor) return;
-    const std::vector<uint16_t> stub = {0x45F9, 0x00FF, 0x9B52, 0xB5C9, 0x640E, 0x046A, (uint16_t)cfg.ext, 0x0006,
+    // (8 px short of the full width: the lives worm's tail swings out past the sprite's own position)
+    const uint16_t shift = (uint16_t)(cfg.ext > 8 ? cfg.ext - 8 : cfg.ext);
+    const std::vector<uint16_t> stub = {0x45F9, 0x00FF, 0x9B52, 0xB5C9, 0x640E, 0x046A, shift, 0x0006,
                                         0x0052, 0x8000, 0x508A, 0x60EE, 0x45F9, 0x00FF, 0xA6D2, 0x4E75};
     p.push_back({0x2FFC40, std::vector<uint16_t>(stub.size(), 0xFFFF), stub});
     p.push_back({0x2488E2, {0x45F9, 0x00FF, 0xA6D2}, {0x4EB9, 0x002F, 0xFC40}});
