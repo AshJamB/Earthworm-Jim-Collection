@@ -141,32 +141,33 @@ public:
     // Sound test / music player. The games' Z80 driver takes commands from a queue the 68000 fills (see
     // ewj_jukebox_boot): $16 stops everything, $10 + id starts a tune or effect. Which ids are tunes was found by playing
     // every id (0-127) on a parked 68000 and seeing how long it sounds: those that loop are the level tunes, a few run for
-    // 4-9 seconds (jingles), everything else is a sound effect. Names are the level a tune plays in, where known.
+    // 4-9 seconds (jingles), everything else is a sound effect. Names: the soundtrack CD's titles (Tommy Tallarico's Earthworm Jim 1 / 2 albums) where the tune could be matched to the level
+    // it plays in, otherwise the level; the rest are listed last. Order: as met in the game.
     std::vector<SoundEntry> sounds() const override {
         static const struct { int id; const char* name; int seconds; } kTunes[] = {
+            {5, "Title Screen / New Junk City", 0},
+            {9, "Hell or Heck? (What the Heck)", 0},
+            {1, "Bungee Levels (Snot a Problem)", 0},
             {0, "Peter Puppy", 0},
-            {1, "Music 1", 0},
-            {2, "Slug for a Butt", 0},
-            {3, "Pod Races", 0},
-            {4, "Intestines", 0},
-            {5, "New Junk City", 0},
+            {2, "Slug for a Butt (Buttsville)", 0},
+            {18, "Helicopter / Chicken Fly", 0},
+            {3, "Professor's Lab / Sea Tunnels", 0},
+            {4, "Intestines (Intestinal Distress)", 0},
             {6, "Asteroids", 0},
-            {7, "Music 7", 0},
-            {8, "Music 8", 0},
-            {9, "Hell or Heck?", 0},
-            {10, "Music 10", 0},
-            {11, "Music 11", 0},
-            {12, "Music 12", 0},
-            {13, "Music 13", 0},
-            {15, "Music 15", 0},
-            {18, "Helicopter", 0},
-            {20, "Music 20", 0},
-            {65, "Music 65", 0},
-            {14, "Jingle 14", 9},
-            {16, "Jingle 16", 4},
-            {17, "Jingle 17", 5},
-            {27, "Jingle 27", 8},
-            {125, "Jingle 125", 9},
+            {13, "Darkness (Darkworm Rag)", 0},
+            {20, "Psy-Crow (Psycrow)", 0},
+            {15, "Boss Theme / Continue", 0},
+            {7, "Unidentified Tune 7", 0},
+            {8, "Unidentified Tune 8", 0},
+            {10, "Unidentified Tune 10", 0},
+            {11, "Unidentified Tune 11", 0},
+            {12, "Unidentified Tune 12", 0},
+            {125, "Unidentified Tune 125", 0},
+            {14, "Jingle 1", 9},
+            {16, "Jingle 2", 4},
+            {17, "Jingle 3", 5},
+            {27, "Jingle 4", 8},
+            {65, "Long Jingle", 34},
         };
         static const int kSilent[] = {19, 126, 127};   // ids that make no sound
         std::vector<SoundEntry> v;
