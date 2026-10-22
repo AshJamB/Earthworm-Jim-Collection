@@ -142,36 +142,36 @@ public:
     // ewj_jukebox_boot): $16 stops everything, $10 + id starts a tune or effect. Which ids are tunes was found by playing
     // every id (0-127) on a parked 68000 and seeing how long it sounds: those that loop are the level tunes, a few run for
     // 4-9 seconds (jingles), everything else is a sound effect. Names: the soundtrack CD's titles (Tommy Tallarico's Earthworm Jim 1 / 2 albums) where the tune could be matched to the level
-    // it plays in, otherwise the level; the rest are listed last. Order: as met in the game.
+    // it plays in, otherwise the level; the tunes that could not be identified are "Unnamed" and only in the Sound Test (after the named ones). Order: as met in the game.
     std::vector<SoundEntry> sounds() const override {
-        static const struct { int id; const char* name; int seconds; } kTunes[] = {
-            {5, "Title Screen / New Junk City", 0},
-            {9, "Hell or Heck? (What the Heck)", 0},
-            {1, "Bungee Levels (Snot a Problem)", 0},
-            {0, "Peter Puppy", 0},
-            {2, "Slug for a Butt (Buttsville)", 0},
-            {18, "Helicopter / Chicken Fly", 0},
-            {3, "Professor's Lab / Sea Tunnels", 0},
-            {4, "Intestines (Intestinal Distress)", 0},
-            {6, "Asteroids", 0},
-            {13, "Darkness (Darkworm Rag)", 0},
-            {20, "Psy-Crow (Psycrow)", 0},
-            {15, "Boss Theme / Continue", 0},
-            {7, "Unidentified Tune 7", 0},
-            {8, "Unidentified Tune 8", 0},
-            {10, "Unidentified Tune 10", 0},
-            {11, "Unidentified Tune 11", 0},
-            {12, "Unidentified Tune 12", 0},
-            {125, "Unidentified Tune 125", 0},
-            {14, "Jingle 1", 9},
-            {16, "Jingle 2", 4},
-            {17, "Jingle 3", 5},
-            {27, "Jingle 4", 8},
-            {65, "Long Jingle", 34},
+        static const struct { int id; const char* name; int seconds; bool music; } kTunes[] = {
+            {5, "Title Screen / New Junk City", 0, true},
+            {9, "Hell or Heck? (What the Heck)", 0, true},
+            {1, "Bungee Levels (Snot a Problem)", 0, true},
+            {0, "Peter Puppy", 0, true},
+            {2, "Slug for a Butt (Buttsville)", 0, true},
+            {18, "Helicopter / Chicken Fly", 0, true},
+            {3, "Professor's Lab / Sea Tunnels", 0, true},
+            {4, "Intestines (Intestinal Distress)", 0, true},
+            {6, "Asteroids", 0, true},
+            {13, "Darkness (Darkworm Rag)", 0, true},
+            {20, "Psy-Crow (Psycrow)", 0, true},
+            {15, "Boss Theme / Continue", 0, true},
+            {7, "Unnamed Tune 7", 0, false},
+            {8, "Unnamed Tune 8", 0, false},
+            {10, "Unnamed Tune 10", 0, false},
+            {11, "Unnamed Tune 11", 0, false},
+            {12, "Unnamed Tune 12", 0, false},
+            {125, "Unnamed Tune 125", 0, false},
+            {14, "Unnamed Jingle 14", 9, false},
+            {16, "Unnamed Jingle 16", 4, false},
+            {17, "Unnamed Jingle 17", 5, false},
+            {27, "Unnamed Jingle 27", 8, false},
+            {65, "Unnamed Jingle 65", 34, false},
         };
         static const int kSilent[] = {19, 126, 127};   // ids that make no sound
         std::vector<SoundEntry> v;
-        for (const auto& t : kTunes) v.push_back({t.id, t.name, true, t.seconds});
+        for (const auto& t : kTunes) v.push_back({t.id, t.name, t.music, t.seconds});
         for (int id = 0; id < 128; id++) {
             bool skip = false;
             for (const auto& t : kTunes) skip |= t.id == id;

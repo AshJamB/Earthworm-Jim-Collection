@@ -146,33 +146,33 @@ public:
     // ewj_jukebox_boot): $16 stops everything, $10 + id starts a tune or effect. Which ids are tunes was found by playing
     // every id (0-127) on a parked 68000 and seeing how long it sounds: those that loop are the level tunes, a few run for
     // 4-9 seconds (jingles), everything else is a sound effect. Names: the soundtrack CD's titles (Tommy Tallarico's Earthworm Jim 1 / 2 albums) where the tune could be matched to the level
-    // it plays in, otherwise the level; the rest are listed last. Order: as met in the game.
+    // it plays in, otherwise the level; the tunes that could not be identified are "Unnamed" and only in the Sound Test (after the named ones). Order: as met in the game.
     std::vector<SoundEntry> sounds() const override {
-        static const struct { int id; const char* name; int seconds; } kTunes[] = {
-            {6, "Title Screen (Doobeedowapbop)", 0},
-            {4, "Anything But Tangerines", 0},
-            {9, "Granny Bonus Theme", 0},
-            {13, "Subterranean (Lorenzen's Soil / ISO 9000)", 0},
-            {3, "Puppy Love", 0},
-            {0, "Villi People", 0},
-            {10, "The Flyin' King & Level Ate", 0},
-            {7, "Udderly Abducted", 0},
-            {2, "Inflated Head", 0},
-            {1, "See Jim Run, Run Jim Run (Door Chase)", 0},
-            {17, "Forked", 0},
-            {8, "Continue to Rock", 0},
-            {5, "Unidentified Tune 5", 0},
-            {11, "Unidentified Tune 11", 0},
-            {12, "Unidentified Tune 12", 0},
-            {14, "Unidentified Tune 14", 0},
-            {15, "Unidentified Tune 15", 0},
-            {91, "Jingle 1", 9},
-            {104, "Jingle 2", 5},
-            {16, "Long Jingle", 50},
+        static const struct { int id; const char* name; int seconds; bool music; } kTunes[] = {
+            {6, "Title Screen (Doobeedowapbop)", 0, true},
+            {4, "Anything But Tangerines", 0, true},
+            {9, "Granny Bonus Theme", 0, true},
+            {13, "Subterranean (Lorenzen's Soil / ISO 9000)", 0, true},
+            {3, "Puppy Love", 0, true},
+            {0, "Villi People", 0, true},
+            {10, "The Flyin' King & Level Ate", 0, true},
+            {7, "Udderly Abducted", 0, true},
+            {2, "Inflated Head", 0, true},
+            {1, "See Jim Run, Run Jim Run (Door Chase)", 0, true},
+            {17, "Forked", 0, true},
+            {8, "Continue to Rock", 0, true},
+            {5, "Unnamed Tune 5", 0, false},
+            {11, "Unnamed Tune 11", 0, false},
+            {12, "Unnamed Tune 12", 0, false},
+            {14, "Unnamed Tune 14", 0, false},
+            {15, "Unnamed Tune 15", 0, false},
+            {91, "Unnamed Jingle 91", 9, false},
+            {104, "Unnamed Jingle 104", 5, false},
+            {16, "Unnamed Jingle 16", 50, false},
         };
         static const int kSilent[] = {18, 25, 58, 60, 64, 74, 75, 78, 86, 105, 126, 127};   // ids that make no sound
         std::vector<SoundEntry> v;
-        for (const auto& t : kTunes) v.push_back({t.id, t.name, true, t.seconds});
+        for (const auto& t : kTunes) v.push_back({t.id, t.name, t.music, t.seconds});
         for (int id = 0; id < 128; id++) {
             bool skip = false;
             for (const auto& t : kTunes) skip |= t.id == id;

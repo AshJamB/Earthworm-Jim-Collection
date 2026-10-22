@@ -41,7 +41,7 @@ static void test_game(const char* path, GameModule* m) {
     int dead = 0, longest = 0;
     for (const SoundEntry& e : list) {
         m->play_sound(md, e.id);
-        const int first = loud_frames(md, e.music ? 600 : 90);   // (some tunes open with a few quiet seconds)
+        const int first = loud_frames(md, e.music || e.name.rfind("Unnamed Tune", 0) == 0 ? 600 : 90);   // (some tunes open with a few quiet seconds)
         if (first == 0) { printf("  id %d (%s) makes no sound\n", e.id, e.name.c_str()); dead++; }
         if (e.music && e.seconds == 0) { longest = std::max(longest, first); CHECK(first > 120); }   // a level tune keeps going
         m->stop_sound(md);
