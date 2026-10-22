@@ -82,3 +82,11 @@ of the snapped position ($FFA686), which the strip redrawing allows for.
 Left-column spawn: the scan at $24AF04 places the objects of the column drawn by the left routine ($248024) at x offset -16 from
 the snapped camera. `widescreen_patches()` backs its map pointer up 3 columns through a stub at $2FFC00 (free ROM; skipped
 when the snapped camera is under 48 px) and uses offset -64, so items and enemies enter from the left edge of the wider view.
+
+## HUD anchoring (widescreen)
+
+The status bar (lives, health, ammo) is a run of sprites the game writes into its SAT buffer at $FF9B52 (from $248484) before
+the objects, with fixed x values. The join point after them, $2488E2 (`lea $FFA6D2,a2`), is patched to call a stub at $2FFC40
+that subtracts `ext` from the x of every sprite from $FF9B52 up to A1 and sets bit 15 of their y (the VDP ignores it; our VDP
+treats it as "HUD sprite" and exempts it from the edge masks). The fixed-position branches of the object builder ($248A00 /
+$248B60) are not used for the bar.

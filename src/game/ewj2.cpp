@@ -65,9 +65,27 @@ void put_text(MegaDrive& md, uint32_t a, const char* s) {
 // camera moves up or down 2 columns wider. The engine runs two scrolling layers, each with its own copy of the code
 // (plane A: $2530xx / $2531xx / $2532xx / $2533xx, plane B: $2534xx - $2537xx). Each patch is one immediate operand;
 // docs/re_ewj2.md says where they are.
+// The status bar is made of sprites placed at fixed screen positions, built by four variants of the sprite builder
+// (plain and flipped) at $255CEA, $255D4C, $255DAE and $255E16 (`sub.w $FFA1E0,d3` then the right-edge test). With HUD
+// anchoring on, they call a stub in free ROM that moves a piece of an object near the left edge (x < $60) `ext` px left
+// and one near the right edge (x >= $E0) `ext` px right, sets bit 15 of its y (ignored by the VDP; the app takes it as
+// "status bar sprite" and keeps it visible beside the level edges) and ends with the original test.
+void hud_patches(std::vector<RomPatch>& p, const GameConfig& cfg) {
+    if (!cfg.hud_anchor) {   // the four sites keep their original code, with only the right-edge test widened
+        for (uint32_t cmp : {0x255CF2u, 0x255D54u, 0x255DB6u, 0x255E1Eu}) p.push_back({cmp, {0x01BF}, {0x01EF}});
+        return;
+    }
+    const uint16_t e = (uint16_t)cfg.ext;
+    const std::vector<uint16_t> stub = {0x9679, 0x00FF, 0xA1E0, 0x0044, 0x8000, 0x0C6A, 0x1060, 0x0002, 0x6406, 0x0443, e,
+                                        0x600C, 0x0C6A, 0x10E0, 0x0002, 0x6504, 0x0643, e, 0x0C43, 0x01EF, 0x4E75};
+    p.push_back({0x2FEE40, std::vector<uint16_t>(stub.size(), 0xFFFF), stub});
+    for (uint32_t site : {0x255CEAu, 0x255D4Cu, 0x255DAEu, 0x255E16u})
+        p.push_back({site, {0x9679, 0x00FF, 0xA1E0, 0x0C43, 0x01BF}, {0x4EB9, 0x002F, 0xEE40, 0x4E71, 0x4E71}});
+}
+
 std::vector<RomPatch> widescreen_patches(const GameConfig& cfg) {
     if (cfg.ext <= 0) return {};
-    return {
+    std::vector<RomPatch> p = {
         {0x253094, {0x0058}, {0x0060}},   // plane A right column: VRAM column offset 44 -> 48 cells
         {0x2530C0, {0x002C}, {0x0030}},   //   map offset 22 -> 24 columns
         {0x2530D2, {0x0016}, {0x0018}},   //   stop 22 -> 24 columns before the map end
@@ -86,9 +104,13 @@ std::vector<RomPatch> widescreen_patches(const GameConfig& cfg) {
         {0x2FEE00, {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF}, {0x2F08, 0x0C79, 0x0030, 0x00FF, 0xA182, 0x6502, 0x5D88, 0x23C8, 0x00FF, 0xA1A8, 0x205F, 0x4E75}},
         {0x256512, {0x0FF0}, {0x0FC0}},
         // Sprite pieces right of the screen are not sent to the VDP (x < $1BF, 447 = 319 px on screen): allow 48 px more.
-        {0x255CF2, {0x01BF}, {0x01EF}}, {0x255D54, {0x01BF}, {0x01EF}}, {0x255DB6, {0x01BF}, {0x01EF}}, {0x255E1E, {0x01BF}, {0x01EF}},
         {0x255E7E, {0x01BF}, {0x01EF}}, {0x255EE6, {0x01BF}, {0x01EF}}, {0x255F4E, {0x01BF}, {0x01EF}}, {0x255FBC, {0x01BF}, {0x01EF}},
+        // ... and objects on the map are not sent to the VDP once more than 32 px left of the screen (`cmpi.w #$60,d3`):
+        // allowed down to 80 px, so they slide out of the wider view instead of vanishing inside it.
+        {0x255E78, {0x0060}, {0x0030}}, {0x255EE0, {0x0060}, {0x0030}}, {0x255F48, {0x0060}, {0x0030}}, {0x255FB6, {0x0060}, {0x0030}},
     };
+    hud_patches(p, cfg);
+    return p;
 }
 
 class EarthwormJim2 : public GameModule {

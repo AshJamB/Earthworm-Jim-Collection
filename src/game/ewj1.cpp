@@ -74,9 +74,25 @@ void put_text(MegaDrive& md, uint32_t a, const char* s) {
 // outside a 320 px screen. These move that to 24 columns (384 px) so scenery and enemies are in place before they
 // enter the wider view; the rows drawn when the camera moves up or down are made 2 columns wider to match.
 // Each patch is one immediate operand; docs/re_ewj1.md says where they are.
+// The status bar (lives, health, ammo) is a run of sprites the game writes into its sprite table buffer ($FF9B52 up to
+// A1) before the objects are added, all of them left of the screen's middle with fixed x values. With HUD anchoring on,
+// the join point after them ($2488E2, `lea $FFA6D2,a2`) calls a stub in free ROM that moves each of those sprites `ext`
+// px left and sets bit 15 of its y (the VDP ignores it; the app takes it as "status bar sprite" and keeps it visible
+// beside the level edges), then does the lea.
+void hud_patches(std::vector<RomPatch>& p, const GameConfig& cfg) {
+    // the two builders' fixed-position branches ($248A00 / $248B60) keep the wider cull
+    p.push_back({0x248A06, {0x01BF}, {0x01EF}});
+    p.push_back({0x248B66, {0x01BF}, {0x01EF}});
+    if (!cfg.hud_anchor) return;
+    const std::vector<uint16_t> stub = {0x45F9, 0x00FF, 0x9B52, 0xB5C9, 0x640E, 0x046A, (uint16_t)cfg.ext, 0x0006,
+                                        0x0052, 0x8000, 0x508A, 0x60EE, 0x45F9, 0x00FF, 0xA6D2, 0x4E75};
+    p.push_back({0x2FFC40, std::vector<uint16_t>(stub.size(), 0xFFFF), stub});
+    p.push_back({0x2488E2, {0x45F9, 0x00FF, 0xA6D2}, {0x4EB9, 0x002F, 0xFC40}});
+}
+
 std::vector<RomPatch> widescreen_patches(const GameConfig& cfg) {
     if (cfg.ext <= 0) return {};
-    return {
+    std::vector<RomPatch> p = {
         {0x24817A, {0x0058}, {0x0060}},   // right column: VRAM column offset 44 -> 48 cells
         {0x2481A0, {0x002C}, {0x0030}},   // right column: map offset 22 -> 24 columns
         {0x2481B2, {0x0016}, {0x0018}},   // right column: stop 22 -> 24 columns before the map end
@@ -92,8 +108,10 @@ std::vector<RomPatch> widescreen_patches(const GameConfig& cfg) {
         {0x2FFC00, {0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF, 0xFFFF}, {0x2F08, 0x0C79, 0x0030, 0x00FF, 0xA686, 0x6502, 0x5D88, 0x23C8, 0x00FF, 0xA694, 0x205F, 0x4E75}},
         {0x24AF06, {0xFFF0}, {0xFFC0}},
         // Sprite pieces right of the screen are not sent to the VDP (x < $1BF, 447 = 319 px on screen): allow 48 px more.
-        {0x248A06, {0x01BF}, {0x01EF}}, {0x248A50, {0x01BF}, {0x01EF}}, {0x248B66, {0x01BF}, {0x01EF}}, {0x248BB0, {0x01BF}, {0x01EF}},
+        {0x248A50, {0x01BF}, {0x01EF}}, {0x248BB0, {0x01BF}, {0x01EF}},   // objects placed on the map
     };
+    hud_patches(p, cfg);
+    return p;
 }
 
 class EarthwormJim1 : public GameModule {

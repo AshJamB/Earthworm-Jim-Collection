@@ -67,3 +67,10 @@ patched to $1EF). The camera is up to 18 px either side of the snapped position 
 
 Left-column spawn: as in the first game: the pointer store at $252FB6 goes through a stub at $2FEE00, offset $0FF0 at $256512
 becomes $0FC0. Neither is done for the rows drawn when the camera moves up or down.
+
+## HUD anchoring (widescreen)
+
+The status bar sprites go through the fixed-position branch ($6(a2) bit 3) of the four sprite-builder variants at $255CEA,
+$255D4C, $255DAE and $255E16. With HUD anchoring they call a stub at $2FEE40 that moves a piece of an object near the left
+edge (x < $60) `ext` px left and one near the right edge (x >= $E0) `ext` px right, and sets bit 15 of its y (the VDP's HUD
+flag). The left-cull compare at $255E78 / $255EE0 / $255F48 / $255FB6 is widened from $60 to $30.

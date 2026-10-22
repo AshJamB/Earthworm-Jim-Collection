@@ -345,7 +345,7 @@ void VDP::render_sprites(uint8_t* dst, int ln) {
             if (!masked && draw_w > 0) {
                 int sx = x - 128;
                 if (sprite_xoff) sx += sprite_xoff(hook_host, idx, attr, x, y);
-                uint8_t hud = sprite_is_hud && sprite_is_hud(hook_host, idx) ? 1 : 0;
+                uint8_t hud = ((vram16(base) & 0x8000) || (sprite_is_hud && sprite_is_hud(hook_host, idx))) ? 1 : 0;   // bit 15 of y: set by a game module's patch (the chip ignores it)
                 int row = ln - sy;
                 bool hf = (attr & 0x800) != 0;
                 if (attr & 0x1000) row = vcells * 8 - 1 - row;

@@ -138,6 +138,40 @@ static void test_strips(const std::vector<uint8_t>& rom, GameModule* m, const St
     CHECK(worst < 0.2);
 }
 
+
+// Status bar anchoring: with hud_anchor on, the lives/health/ammo sprites carry the HUD flag (y bit 15) and sit in the
+// extension beside the 4:3 view; with it off none are flagged and nothing sits there that is not the level's own.
+static void test_hud(const std::vector<uint8_t>& rom, GameModule* m, int level) {
+    const int ext = 40;
+    int flagged[2] = {0, 0}, left[2] = {0, 0}, right[2] = {0, 0};
+    for (int on = 0; on < 2; on++) {
+        MegaDrive md;
+        CHECK(md.load_rom(rom));
+        GameConfig cfg;
+        cfg.ext = ext;
+        cfg.hud_anchor = on;
+        cfg.cheats["inf_health"] = cfg.cheats["inf_lives"] = true;
+        md.vdp.ext = ext; md.vdp.sprite_limit = false; md.vdp.ignore_left_blank = true;
+        m->configure(md, cfg);
+        CHECK(m->start_level(md, cfg, level, 0));
+        md.vdp.ext = ext; md.vdp.sprite_limit = false; md.vdp.ignore_left_blank = true;
+        m->configure(md, cfg);
+        FrameInfo info;
+        run_frames(md, m, cfg, info, 200);
+        const uint32_t sat = (uint32_t)(md.vdp.reg[5] & 0x7F) << 9;
+        for (int n = 0, idx = 0; n < 80; n++) {
+            const uint32_t a = sat + idx * 8;
+            const int yw = (md.vdp.vram[a] << 8) | md.vdp.vram[a + 1], x = ((md.vdp.vram[a + 6] << 8) | md.vdp.vram[a + 7]) & 0x1FF;
+            if (yw & 0x8000) { flagged[on]++; if (x < 128) left[on]++; if (x >= 128 + 320) right[on]++; }
+            idx = md.vdp.vram[a + 3] & 0x7F;
+            if (!idx) break;
+        }
+    }
+    printf("%s level %d HUD: on: %d flagged (%d left, %d right of the 4:3 view), off: %d flagged\n", m->id(), level, flagged[1], left[1], right[1], flagged[0]);
+    CHECK(flagged[1] > 0 && left[1] > 0);
+    CHECK(flagged[0] == 0);
+}
+
 static void test_game(const char* path, GameModule* m, bool right_moves) {
     std::ifstream f(path, std::ios::binary);
     if (!f) { printf("skip %s (ROM not found)\n", path); return; }
@@ -153,6 +187,7 @@ static void test_game(const char* path, GameModule* m, bool right_moves) {
             CHECK(md.load_rom(rom));
             GameConfig cfg;
             cfg.ext = pass ? ext : 0;
+            cfg.hud_anchor = false;   // (the status bar moves the picture's timing a little: tested in test_hud)
             md.vdp.ext = cfg.ext;
             md.vdp.sprite_limit = cfg.ext == 0;
             md.vdp.ignore_left_blank = cfg.ext > 0;
@@ -205,6 +240,7 @@ static void test_game(const char* path, GameModule* m, bool right_moves) {
     CHECK(bad_center == 0);
 
     test_strips(rom, m, m->id()[3] == '1' ? kLayer1 : kLayer2, m->id()[3] == '1' ? 0xFFA676 : 0xFFA172, 0);
+    test_hud(rom, m, 0);
 
     // outside a level the extension is closed
     MegaDrive md;
