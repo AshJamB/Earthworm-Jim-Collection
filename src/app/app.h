@@ -22,11 +22,14 @@
 #endif
 #include "rewind.h"
 #include "achievements.h"
+#include "version.h"
+#ifdef _WIN32
+#include "updater.h"
+#endif
 #ifdef __ANDROID__
 #include "touch.h"
 #endif
 
-constexpr const char* kAppVersion = "1.1";   // shown in the launcher, the window title and Credits
 constexpr double kEmuFps = 53693175.0 / (3420.0 * 262.0);   // 59.9227 Hz
 
 struct GameSlot {
@@ -116,6 +119,9 @@ private:
     Video video_;
     Audio audio_;
     Input input_;
+#ifdef _WIN32
+    Updater updater_;
+#endif
     bool running_ = true;
     bool active_window_ = true;
     bool is_fullscreen_ = false;
@@ -275,6 +281,8 @@ private:
     void open_pause_menu();
     void open_options_menu(bool from_launcher);
     void open_credits(bool from_launcher);
+    void check_for_updates(bool manual);   // Windows: in-app updater; elsewhere opens the Releases page
+    void update_poll();                    // called every frame: reacts to the updater's results
     MenuPage video_page();
     MenuPage color_page();
     MenuPage audio_page();

@@ -5,7 +5,7 @@ $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
 $exe = Join-Path $root "build\bin\EarthwormJimCollection.exe"
 if (-not (Test-Path $exe)) { throw "Build first with build.bat" }
-$version = (Select-String -Path (Join-Path $root "src\app\app.h") -Pattern 'kAppVersion = "([^"]+)"').Matches[0].Groups[1].Value
+$version = (Select-String -Path (Join-Path $root "src\app\version.h") -Pattern 'kAppVersion = "([^"]+)"').Matches[0].Groups[1].Value
 New-Item -ItemType Directory -Force (Join-Path $root "dist") | Out-Null
 $zipPath = Join-Path $root "dist\Earthworm-Jim-Collection-v$version-win64.zip"
 

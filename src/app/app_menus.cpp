@@ -75,14 +75,14 @@ void App::open_options_menu(bool from_launcher) {
     p.items.push_back(MenuItem::action("Video", [this]() { menu_.push(video_page()); }, "Display mode, widescreen, scaling and filters."));
     p.items.push_back(MenuItem::action("Colour", [this]() { menu_.push(color_page()); }, "Colour profiles and picture adjustments."));
     p.items.push_back(MenuItem::action("Audio", [this]() { menu_.push(audio_page()); }, "Volume and sound-chip options."));
-    // Player 2 only matters for World of Illusion: offer it from the launcher and inside 2-player games.
+    // Player 2 only matters for games with simultaneous 2-player support (none yet): offered from the launcher and inside such games.
     bool two_player = from_launcher || (session_ && session_->module()->max_players() > 1);
     p.items.push_back(MenuItem::action(two_player ? "Controls - Player 1" : "Controls", [this]() { menu_.push(controls_page(0)); },
                                        "Keyboard and gamepad bindings."));
     if (two_player)
-        p.items.push_back(MenuItem::action(from_launcher ? "Controls - Player 2 (World of Illusion)" : "Controls - Player 2",
+        p.items.push_back(MenuItem::action("Controls - Player 2",
                                            [this]() { menu_.push(controls_page(1)); },
-                                           "Second player's keys and gamepad (World of Illusion is the only 2-player game)."));
+                                           "Second player's keys and gamepad."));
     p.items.push_back(MenuItem::header("Speed"));
     // (beside each switch: what to hold, or why it is off)
     MenuItem ff = MenuItem::toggle("Fast Forward", [this]() { return settings_.fast_forward && !settings_.achievements; },
@@ -115,6 +115,10 @@ void App::open_options_menu(bool from_launcher) {
     p.items.push_back(MenuItem::info("Quick load", [this]() { return hotkey_text(HK_LOAD_STATE); }));
     p.items.push_back(MenuItem::info("Screenshot", [this]() { return hotkey_text(HK_SCREENSHOT); }));
     p.items.push_back(MenuItem::info("Fullscreen", []() { return std::string("F11 / Alt+Enter"); }));
+    p.items.push_back(MenuItem::header("Updates"));
+    p.items.push_back(MenuItem::toggle("Check for Updates at Start", [this]() { return settings_.check_updates; },
+                                       [this](bool v) { settings_.check_updates = v; },
+                                       "Looks for a newer release on GitHub when the app starts. Nothing is installed without asking."));
 #endif
     p.on_back = [this]() { save_settings(); };
     if (from_launcher) menu_.open(std::move(p));
@@ -126,7 +130,6 @@ void App::open_credits(bool from_launcher) {
     p.title = "Credits";
     p.subtitle = std::string("Earthworm Jim Collection  \xE2\x80\xA2  v") + kAppVersion;
     p.wide = true;
-    p.items.push_back(MenuItem::header("Find me over at:"));
     auto link = [this](const char* label, const char* shown, const char* url) {
         MenuItem it = MenuItem::action(label, [this, url]() {
             if (autotest_) return;   // scripted test runs never open a browser
@@ -135,11 +138,55 @@ void App::open_credits(bool from_launcher) {
         it.value_text = [shown]() { return std::string(shown); };
         return it;
     };
-    p.items.push_back(link("YouTube", "https://www.youtube.com/adhgaming", "https://www.youtube.com/adhgaming"));
-    p.items.push_back(link("Reddit", "u/Darhkwing", "https://www.reddit.com/user/Darhkwing"));
-    p.items.push_back(link("GitHub", "https://github.com/Darhkfox", "https://github.com/Darhkfox"));
+    p.items.push_back(MenuItem::header("Earthworm Jim Collection by Ash Brittain"));
+    p.items.push_back(link("GitHub", "AshJamB/Earthworm-Jim-Collection", "https://github.com/AshJamB/Earthworm-Jim-Collection"));
+    p.items.push_back(MenuItem::action("Check for Updates", [this]() { check_for_updates(true); },
+                                       "Looks for a newer release on GitHub."));
+    p.items.push_back(MenuItem::header("Based on the Mickey and Donald Collection by Darhkfox"));
+    p.items.push_back(link("GitHub", "Darhkfox/MickeyAndDonaldCollection", "https://github.com/Darhkfox/MickeyAndDonaldCollection"));
     if (from_launcher) menu_.open(std::move(p));
     else menu_.push(std::move(p));   // from the pause menu: Back returns to it
+}
+
+// Updates. Windows: the Updater checks GitHub in the background (at start-up, quietly, or when asked from Credits)
+// and installs on request. Elsewhere (Android) the Releases page is opened instead.
+void App::check_for_updates(bool manual) {
+#ifdef _WIN32
+    if (autotest_) return;
+    if (manual) menu_.toast("Checking for updates...", 2.0f);
+    updater_.check(manual);
+#else
+    if (manual && !autotest_) open_url("https://github.com/AshJamB/Earthworm-Jim-Collection/releases/latest");
+#endif
+}
+
+void App::update_poll() {
+#ifdef _WIN32
+    Updater::Status st = updater_.poll();
+    if (!st.fresh) return;
+    switch (st.state) {
+    case Updater::State::Available:
+        if (st.manual) {
+            menu_.confirm("Version " + st.version + " is available (you have v" + kAppVersion + "). Download and install it now?",
+                          [this]() { updater_.install(); menu_.toast("Downloading the update...", 3.0f); },
+                          "The app closes and reopens itself. Your settings and save states are kept.");
+        } else {
+            menu_.toast("Update " + st.version + " available: Credits > Check for Updates", 5.0f);
+        }
+        break;
+    case Updater::State::UpToDate:
+        if (st.manual) menu_.toast("You're up to date (v" + std::string(kAppVersion) + ")", 3.0f);
+        break;
+    case Updater::State::Failed:
+        if (st.manual) menu_.toast("Update failed: " + st.message, 5.0f);
+        break;
+    case Updater::State::Restarting:
+        running_ = false;    // the helper script swaps the exe and starts the new version
+        break;
+    default:
+        break;
+    }
+#endif
 }
 
 MenuPage App::video_page() {
@@ -177,7 +224,7 @@ MenuPage App::video_page() {
         p.items.push_back(MenuItem::choice("Widescreen", labels, [this, top]() { return std::min((int)settings_.widescreen, top); },
                                            [this, changed](int v) { settings_.widescreen = (WideMode)v; changed(); resize_window_to_scale(); },
                                            session_ ? "Shows more of each level. Menus stay 4:3."
-                                                    : "Shows more of each level. Menus stay 4:3. World of Illusion goes up to 2:1."));
+                                                    : "Shows more of each level. Menus stay 4:3. Not available in the Earthworm Jim games yet."));
     }
     MenuItem hud = MenuItem::toggle("Re-anchor HUD", [this]() { return settings_.hud_anchor; },
                                     [this, changed](bool v) { settings_.hud_anchor = v; changed(); },

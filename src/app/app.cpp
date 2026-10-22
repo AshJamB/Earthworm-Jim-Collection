@@ -215,6 +215,7 @@ void App::frame(double dt) {
     if (autotest_) { if (!autotest_realtime_) dt = 1.0 / kEmuFps; run_script(); }   // one game frame per loop
     loop_frame_++;
     input_.poll();
+    update_poll();
     UiInput ui = poll_ui((float)dt);
     menu_.footer = "\xE2\x86\x91\xE2\x86\x93 Select    \xE2\x86\x90\xE2\x86\x92 Change    Enter / (A) Confirm    Esc / (B) Back";
 

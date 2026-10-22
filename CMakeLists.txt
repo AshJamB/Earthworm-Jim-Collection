@@ -45,6 +45,7 @@ add_executable(EarthwormJimCollection WIN32
     src/app/romfind.cpp
     src/app/sys_win.cpp
     src/app/unzip.cpp
+    src/app/updater.cpp
     src/app/monitors.cpp
     src/app/png.cpp
     src/app/rewind.cpp
@@ -55,7 +56,7 @@ add_executable(EarthwormJimCollection WIN32
     res/app.rc
 )
 target_link_libraries(EarthwormJimCollection PRIVATE mdcore
-    user32 gdi32 ole32 d3d11 dxgi d3dcompiler xaudio2 xinput dinput8 dxguid dwrite winmm dwmapi shell32)
+    user32 gdi32 ole32 d3d11 dxgi d3dcompiler xaudio2 xinput dinput8 dxguid dwrite winmm dwmapi shell32 winhttp)
 set_target_properties(EarthwormJimCollection PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/bin
     RUNTIME_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/bin-debug)

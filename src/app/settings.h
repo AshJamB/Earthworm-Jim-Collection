@@ -63,8 +63,9 @@ struct Settings {
     // Hold-to-use speed controls (by default keyboard Tab / R, pad right / left trigger: hotkey_keys / hotkey_pads)
     bool        fast_forward = true;
     bool        rewind = true;
+    bool        check_updates = true;   // check GitHub for a newer release at start-up (Windows)
     // Achievements on: they can be earned, and cheats, rewind and fast forward are off
-    bool        achievements = true;
+    bool        achievements = false;   // off until the Earthworm Jim modules define real achievements
 
     // Touch screens (Android): on-screen pad 0 = when the screen is touched, 1 = always, 2 = never; opacity %
     int         touch_mode = 0;

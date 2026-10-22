@@ -20,7 +20,7 @@ void App::ach_welcome() {
     for (auto& g : games_) total += (int)g.module->achievements().size();
     MenuPage p;
     p.title = "Achievements";
-    p.subtitle = std::to_string(total) + " to earn across Castle of Illusion, QuackShot and World of Illusion";
+    p.subtitle = std::to_string(total) + " to earn across Earthworm Jim and Earthworm Jim 2";
     p.wide = true;
     p.items.push_back(MenuItem::info("Beat the bosses, clear the worlds, pull off tricky moves and find the secret ones."));
     p.items.push_back(MenuItem::header("To keep them fair, while achievements are on"));

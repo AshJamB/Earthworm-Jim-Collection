@@ -31,6 +31,14 @@ folder in this repo is git-ignored. Other regions (Europe) are recognised as "an
 See `build.bat` (Windows, Visual Studio 2022 + CMake) and `android/` (SDK, NDK 28.2, `android\fetch_sdl.ps1`).
 The code has not been compiled since the rebrand: expect small fixes on the first build.
 
+## Updates
+
+On Windows the app checks this repository's latest GitHub Release at start-up (switch it off under Options) and
+can update itself from **Credits > Check for Updates**. This needs the repository's releases to be publicly readable;
+while they are not, the start-up check fails silently. Releases are built and published automatically by
+`.github/workflows/release.yml` when the program changes on `main` (see the comments in that file for how the
+version number is chosen). On Android, Check for Updates opens the Releases page.
+
 ## Licence and credits
 
 MIT (`LICENSE`). Core and frontend by Darhkfox. *Earthworm Jim* is a trademark of its respective owners; this is an

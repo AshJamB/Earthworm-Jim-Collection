@@ -1,0 +1,75 @@
+name: Release Earthworm Jim Collection
+
+# Builds the Windows exe and publishes a GitHub Release whenever the program changes on main.
+# The version is the first rule that applies:
+#   1. the "version" input when run by hand from the Actions tab
+#   2. "[release X.Y.Z]" in the commit message
+#   3. kAppVersion in src/app/version.h, if it is newer than the latest release
+#   4. the latest release with its patch number plus one
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'res/**'
+      - 'CMakeLists.txt'
+      - 'release.ps1'
+      - 'readme.txt'
+      - '.github/workflows/release.yml'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Exact version to release, e.g. 0.2.0 (leave blank for automatic)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          function Parse($s) { try { [version]($s -replace '^v', '') } catch { $null } }
+          $latest = git tag --list 'v*' | ForEach-Object { Parse $_ } | Where-Object { $_ } | Sort-Object -Descending | Select-Object -First 1
+          $header = (Select-String -Path src/app/version.h -Pattern 'kAppVersion = "([^"]+)"').Matches[0].Groups[1].Value
+          $msg = git log -1 --pretty=%B
+          $chosen = $null
+          if ($env:INPUT_VERSION) { $chosen = $env:INPUT_VERSION }
+          elseif ($msg -match '\[release (\d+\.\d+\.\d+)\]') { $chosen = $Matches[1] }
+          elseif ((Parse $header) -and (-not $latest -or (Parse $header) -gt $latest)) { $chosen = $header }
+          elseif ($latest) { $chosen = '{0}.{1}.{2}' -f $latest.Major, $latest.Minor, ([Math]::Max($latest.Build, 0) + 1) }
+          else { $chosen = $header }
+          Write-Host "Releasing v$chosen (latest so far: $latest)"
+          "version=$chosen" >> $env:GITHUB_OUTPUT
+
+      - name: Stamp version into the build
+        shell: pwsh
+        run: |
+          $v = '${{ steps.ver.outputs.version }}'
+          (Get-Content src/app/version.h -Raw) -replace 'kAppVersion = "[^"]+"', "kAppVersion = `"$v`"" | Set-Content src/app/version.h -NoNewline
+
+      - name: Build
+        shell: cmd
+        run: build.bat
+
+      - name: Package
+        shell: pwsh
+        run: ./release.ps1
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $v = '${{ steps.ver.outputs.version }}'
+          gh release create "v$v" "dist/Earthworm-Jim-Collection-v$v-win64.zip" --title "Earthworm Jim Collection v$v" --generate-notes --latest
