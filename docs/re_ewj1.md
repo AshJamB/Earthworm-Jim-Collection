@@ -90,3 +90,11 @@ the objects, with fixed x values. The join point after them, $2488E2 (`lea $FFA6
 that subtracts `ext` from the x of every sprite from $FF9B52 up to A1 and sets bit 15 of their y (the VDP ignores it; our VDP
 treats it as "HUD sprite" and exempts it from the edge masks). The fixed-position branches of the object builder ($248A00 /
 $248B60) are not used for the bar.
+
+## Sound driver (music player / sound test)
+
+Z80 driver (loaded from ROM into Z80 RAM in the first frames after power-on; the 68000 sends its sample-table pointers with
+command $0B). The 68000 appends commands to a 64-byte ring at Z80 $1B40 with its write index at Z80 $36, each as `$FF`,
+command, argument (routine `$2CBC82` in EWJ1, `$2D8280` in EWJ2 appends one byte). `$16` stops all sound, `$10 id` starts a
+tune or effect. The port parks the 68000 after the driver is up and writes the ring itself. Ids 0-127 were each played for up to 10 s:
+looping ids are the level tunes, a few run 4-9 s (jingles), the rest are effects.

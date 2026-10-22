@@ -89,6 +89,24 @@ void freeze_68k(MegaDrive& md) {
     md.z80_reset = false;
 }
 
+void ewj_jukebox_boot(MegaDrive& md) {
+    md.power_on();
+    for (int i = 0; i < 30; i++) md.run_frame();   // (the driver is up after about 8 frames, before any sound is asked for)
+    freeze_68k(md);
+    for (int i = 0; i < 20; i++) md.run_frame();
+}
+
+void ewj_sound_send(MegaDrive& md, int cmd, int arg) {
+    auto put = [&](int b) {
+        const uint8_t p = md.zram[0x36];
+        md.zram[0x1B40 + p] = (uint8_t)b;
+        md.zram[0x36] = (uint8_t)((p + 1) & 0x3F);
+    };
+    put(0xFF);
+    put(cmd);
+    if (arg >= 0) put(arg);
+}
+
 namespace {
 // The return address call_68k pushes: the vector table, never code. Reaching it ends the call before it executes.
 constexpr uint32_t kCallReturn = 0x000000;

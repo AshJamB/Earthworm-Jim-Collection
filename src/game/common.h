@@ -32,6 +32,12 @@ bool press_until(MegaDrive& md, uint16_t button, const std::function<bool()>& co
 // Parks the 68000 for good (interrupts masked) and releases the Z80 bus, leaving the Z80 sound
 // driver running on its own - used by the music player.
 void freeze_68k(MegaDrive& md);
+// The Earthworm Jim games' Z80 sound driver: the 68000 appends commands to a 64-byte ring in Z80 RAM ($1B40, write
+// index at $36), each as $FF, command, argument. The driver is loaded in the first frames after power-on; the jukebox
+// boot parks the 68000 once it is (ewj_jukebox_boot) and then sends commands itself: $16 stops everything, $10 starts
+// tune or effect `id`.
+void ewj_jukebox_boot(MegaDrive& md);
+void ewj_sound_send(MegaDrive& md, int cmd, int arg = -1);
 // Runs the 68000 subroutine at `entry` until it returns, on a parked CPU (freeze_68k), with interrupts masked; the
 // CPU is parked again afterwards. Only the 68000 runs. Returns false if it hasn't returned after `max_cycles`.
 bool call_68k(MegaDrive& md, uint32_t entry, int max_cycles = 2000000);

@@ -77,3 +77,11 @@ flag). The left-cull compare at $255E78 / $255EE0 / $255F48 / $255FB6 is widened
 The HUD text and counters (lives, health, ammo) are written into the sprite buffer at $FF964E (from $255762) before the
 objects; the join $255AF2 (`clr.b $FFFBD7`) calls a stub at $2FEE80 that moves everything in the buffer so far `ext` px left
 and flags it.
+
+## Sound driver (music player / sound test)
+
+Z80 driver (loaded from ROM into Z80 RAM in the first frames after power-on; the 68000 sends its sample-table pointers with
+command $0B). The 68000 appends commands to a 64-byte ring at Z80 $1B40 with its write index at Z80 $36, each as `$FF`,
+command, argument (routine `$2CBC82` in EWJ1, `$2D8280` in EWJ2 appends one byte). `$16` stops all sound, `$10 id` starts a
+tune or effect. The port parks the 68000 after the driver is up and writes the ring itself. Ids 0-127 were each played for up to 10 s:
+looping ids are the level tunes, a few run 4-9 s (jingles), the rest are effects.

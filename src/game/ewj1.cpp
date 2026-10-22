@@ -138,6 +138,51 @@ public:
         return patches_safe(md, widescreen_patches(cfg));
     }
 
+    // Sound test / music player. The games' Z80 driver takes commands from a queue the 68000 fills (see
+    // ewj_jukebox_boot): $16 stops everything, $10 + id starts a tune or effect. Which ids are tunes was found by playing
+    // every id (0-127) on a parked 68000 and seeing how long it sounds: those that loop are the level tunes, a few run for
+    // 4-9 seconds (jingles), everything else is a sound effect. Names are the level a tune plays in, where known.
+    std::vector<SoundEntry> sounds() const override {
+        static const struct { int id; const char* name; int seconds; } kTunes[] = {
+            {0, "Peter Puppy", 0},
+            {1, "Music 1", 0},
+            {2, "Slug for a Butt", 0},
+            {3, "Pod Races", 0},
+            {4, "Intestines", 0},
+            {5, "New Junk City", 0},
+            {6, "Asteroids", 0},
+            {7, "Music 7", 0},
+            {8, "Music 8", 0},
+            {9, "Hell or Heck?", 0},
+            {10, "Music 10", 0},
+            {11, "Music 11", 0},
+            {12, "Music 12", 0},
+            {13, "Music 13", 0},
+            {15, "Music 15", 0},
+            {18, "Helicopter", 0},
+            {20, "Music 20", 0},
+            {65, "Music 65", 0},
+            {14, "Jingle 14", 9},
+            {16, "Jingle 16", 4},
+            {17, "Jingle 17", 5},
+            {27, "Jingle 27", 8},
+            {125, "Jingle 125", 9},
+        };
+        static const int kSilent[] = {19, 126, 127};   // ids that make no sound
+        std::vector<SoundEntry> v;
+        for (const auto& t : kTunes) v.push_back({t.id, t.name, true, t.seconds});
+        for (int id = 0; id < 128; id++) {
+            bool skip = false;
+            for (const auto& t : kTunes) skip |= t.id == id;
+            for (int sid : kSilent) skip |= sid == id;
+            if (!skip) v.push_back({id, "Effect " + std::to_string(id), false, 0});
+        }
+        return v;
+    }
+    void jukebox_boot(MegaDrive& md) override { ewj_jukebox_boot(md); }
+    void play_sound(MegaDrive& md, int id) override { ewj_sound_send(md, 0x16); ewj_sound_send(md, 0x10, id); }
+    void stop_sound(MegaDrive& md) override { ewj_sound_send(md, 0x16); }
+
     std::vector<CheatEntry> cheats() const override {
         return {
             {"inf_health", "Infinite Health", "Jim's suit energy stays at 100%. Falling into a pit still costs a life.", {}},
